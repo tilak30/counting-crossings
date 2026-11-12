@@ -1,0 +1,12 @@
+{
+  "name": "counting-crossings",
+  "version": "1.0.0",
+  "private": true,
+  "description": "NYC bridge inventory working prototype",
+  "scripts": {
+    "test": "node --test tests/data.test.js",
+    "build:offline": "python3 scripts/build_standalone.py",
+    "preview": "python3 -m http.server 8000 --directory dist"
+  },
+  "engines": {"node": ">=18"}
+}

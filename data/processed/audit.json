@@ -1,0 +1,137 @@
+{
+  "structures": 813,
+  "deck_area_sq_ft": 15754558.3,
+  "spans": 5196,
+  "closed": 10,
+  "legacy": 11,
+  "condition_counts": {
+    "Fair": 518,
+    "Closed": 10,
+    "Good": 223,
+    "Very good": 54,
+    "Poor": 8
+  },
+  "conditions": [
+    {
+      "group": "Poor",
+      "count": 8,
+      "deck_area_sq_ft": 585626.0,
+      "count_pct": 0.984009840098401,
+      "area_pct": 3.717184505261566
+    },
+    {
+      "group": "Fair",
+      "count": 518,
+      "deck_area_sq_ft": 10728146.3,
+      "count_pct": 63.714637146371466,
+      "area_pct": 68.09550668265959
+    },
+    {
+      "group": "Good",
+      "count": 223,
+      "deck_area_sq_ft": 3108322.0,
+      "count_pct": 27.429274292742928,
+      "area_pct": 19.72966769877642
+    },
+    {
+      "group": "Very good",
+      "count": 54,
+      "deck_area_sq_ft": 1232183.0,
+      "count_pct": 6.642066420664206,
+      "area_pct": 7.821120570546239
+    },
+    {
+      "group": "Closed",
+      "count": 10,
+      "deck_area_sq_ft": 100281.0,
+      "count_pct": 1.2300123001230012,
+      "area_pct": 0.6365205427561875
+    }
+  ],
+  "boroughs": [
+    {
+      "group": "Bronx",
+      "count": 154,
+      "deck_area_sq_ft": 1929746.8,
+      "count_pct": 18.94218942189422,
+      "area_pct": 12.248815633250727
+    },
+    {
+      "group": "Brooklyn",
+      "count": 179,
+      "deck_area_sq_ft": 2238977.5,
+      "count_pct": 22.01722017220172,
+      "area_pct": 14.211617091162752
+    },
+    {
+      "group": "Manhattan",
+      "count": 189,
+      "deck_area_sq_ft": 4030060.5,
+      "count_pct": 23.247232472324722,
+      "area_pct": 25.580282374530295
+    },
+    {
+      "group": "Queens",
+      "count": 200,
+      "deck_area_sq_ft": 2332079.0,
+      "count_pct": 24.600246002460025,
+      "area_pct": 14.802566695887627
+    },
+    {
+      "group": "Staten Island",
+      "count": 69,
+      "deck_area_sq_ft": 615968.5,
+      "count_pct": 8.487084870848708,
+      "area_pct": 3.909779558846788
+    },
+    {
+      "group": "Cross-borough",
+      "count": 21,
+      "deck_area_sq_ft": 4599401.0,
+      "count_pct": 2.5830258302583027,
+      "area_pct": 29.194096796734694
+    },
+    {
+      "group": "Unknown",
+      "count": 1,
+      "deck_area_sq_ft": 8325.0,
+      "count_pct": 0.12300123001230012,
+      "area_pct": 0.05284184958711283
+    }
+  ],
+  "inspection_date_min": "2017-11-29",
+  "inspection_date_max": "2024-12-23",
+  "unknown_borough_bins": [
+    "2269600"
+  ],
+  "footer_open_area_sq_ft": 15700477,
+  "computed_nonclosed_area_sq_ft": 15654277.3,
+  "discarded_footer_rows": [
+    {
+      "pdf_page": 66,
+      "cells": [
+        "813 OPEN BRIDGES",
+        "",
+        "",
+        "OPEN SPANS 5,164",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "OPEN SF",
+        "15,700,477",
+        "$70,895,043,000",
+        "ALL",
+        "",
+        ""
+      ]
+    }
+  ],
+  "source_sha256": "e458da9224e3b4ae45c6d0e45d9f7c70dda9d341c501fb1388b50a3f54149c03",
+  "source_url": "https://www.nyc.gov/html/dot/downloads/pdf/dot_bridgereport24.pdf",
+  "retrieved_date": "2026-10-14"
+}
