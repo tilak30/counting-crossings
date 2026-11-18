@@ -345,8 +345,7 @@ button {
 
 svg text {
   font-family: Arial, Helvetica, sans-serif;
-  fill: #52636a;
-  font-size: 11px
+  fill: #52636a
 }
 
 .chart-caption {
@@ -729,6 +728,44 @@ svg .structure-point:focus-visible {
   }
 }
 
+/* Preserve comparison context without erasing excluded categories. */
+.context-muted { filter: grayscale(1); }
+.context-muted text { fill: #68767b; }
+.context-muted > rect:not(:first-child), .context-muted > circle, .context-muted > line { opacity: .55; }
+.context-muted:hover > rect, .context-muted:focus-visible > rect { opacity: 1; }
+.control-help { font-size: 13px; line-height: 1.55; margin: 10px 0 2px; }
+.reference-legend { color: #627078; font-size: 12px; margin: 4px 0 8px; }
+.reference-circle, .reference-square { display: inline-block; width: 7px; height: 7px; margin-right: 3px; border: 1px solid #71817c; vertical-align: middle; }
+.reference-circle { border-radius: 50%; background: #b3bfba; }
+.reference-square { background: white; }
+.median-comparison { border-top: 1px solid var(--line); margin-top: 20px; padding-top: 16px; }
+.median-comparison h3, .code-glossary h3 { font-family: Georgia, serif; font-size: 21px; font-weight: 500; margin: 0 0 8px; }
+.median-comparison p { font-size: 13px; line-height: 1.55; }
+.table-scroll { overflow-x: auto; }
+.median-table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+.median-table th, .median-table td { padding: 9px 12px; text-align: right; border-bottom: 1px solid var(--line); }
+.median-table th:first-child { text-align: left; }
+.median-table thead th { background: #eef2ef; font-weight: 600; }
+.median-table th[colspan] { text-align: center; }
+.median-table td:nth-child(5), .median-table thead tr:last-child th:nth-child(4) { border-left: 1px solid var(--line); }
+.median-table tr[data-condition=Closed] th, .median-table tr[data-condition=Closed] td { border-top: 1px dashed #8a9b99; }
+.code-glossary { padding: 20px 0 6px; }
+.code-glossary p { font-size: 14px; line-height: 1.6; max-width: 1000px; }
+.chart-caption { font-size: 12px; line-height: 1.55; }
+@media(max-width:720px) { .median-table { min-width: 650px; } }
+
+/* Selected rows have a distinct boundary; data colors retain their original meaning. */
+.context-selected > rect:first-child { stroke: #438576; stroke-width: 1.4; }
+.context-selected text { fill: #194c43; }
+.context-muted > rect:not(:first-child), .context-muted > circle, .context-muted > line { opacity: .72; }
+.chart-panel > svg { font-size: 12px; }
+.legend { font-size: 12px; }
+.legend small { font-size: 11px; }
+.panel-title p, .record-heading p { font-size: 13px; }
+.filters label { font-size: 13px; }
+.filters input, .filters select { font-size: 14px; }
+.filter-chip, .active-filters .all-label { font-size: 13px; }
+
 </style>
 </head>
 <body>
@@ -740,45 +777,66 @@ svg .structure-point:focus-visible {
   </header>
   <section class="intro" aria-label="About this dashboard"><p>Explore how the picture changes when each structure counts equally, or by the area it covers. Start anywhere: click a condition or borough, then inspect the structures behind it.</p><button id="reset" class="reset">Reset all filters <span aria-hidden="true">↺</span></button></section>
   <section class="filters" aria-label="Filter the inventory">
-    <label>Borough<select id="borough" aria-label="Borough"><option value="">All borough groups</option></select></label>
+    <label>Borough<select id="borough" aria-label="Borough"><option value="">All borough groups</option><option value="__multiple__" disabled>Multiple boroughs selected</option></select></label>
     <label>Bridge group<select id="bridge-type" aria-label="Bridge group"><option value="">All bridge codes</option><option>PED-coded</option><option>Other codes</option></select></label>
     <label>Rating basis<select id="rating" aria-label="Rating basis"><option value="">All rating bases</option><option>NBI-W</option><option>Legacy exception</option></select></label>
     <label>Minimum deck area (sq ft)<input id="min-area" aria-label="Minimum deck area (sq ft)" type="number" min="0" step="100" placeholder="No minimum"></label>
     <label class="search-label">Find a structure<input id="search" aria-label="Find a structure" type="search" placeholder="BIN, bridge or crossed feature"></label>
   </section>
+  <p class="control-help">Bridge groups follow the report codes: PED = Pedestrian. PED-coded includes any code containing PED, such as PED-A. <a href="#code-glossary">Code glossary</a></p>
   <div id="active-filters" class="active-filters" aria-label="Active filters"></div>
   <section class="summary" aria-label="Selected inventory totals" aria-live="polite">
     <div><span class="stat-label">Structures selected</span><strong id="record-count">Loading…</strong><span id="record-note">of 813 inventory records</span></div>
     <div><span class="stat-label">Selected deck area</span><strong id="area-total">Loading…</strong><span id="area-exact">square feet</span></div>
-    <div><span class="stat-label">How to read the shares</span><p>Each percentage uses the <b>current selection</b>. A borough share is its contribution to that selection.</p></div>
+    <div><span class="stat-label">How to read the shares</span><p>Totals and individual records use <b>all filters</b>. Each summary chart keeps its own category comparison; read the comparison note below it.</p></div>
   </section>
   <div id="empty-state" class="empty-state" hidden>No structures match these filters. Clear a filter above or reset to the full inventory.</div>
   <section id="dashboard" class="dashboard" aria-label="Three linked views">
     <article class="chart-panel">
       <div class="panel-title"><span class="view-number">01</span><div><h2>Condition mix</h2><p>RQ1 · Count each structure, then weight by area.</p></div></div>
       <div class="legend"><span><i class="solid-key"></i>Structure share</span><span><i class="hatch-key"></i>Deck-area share</span><small>Click a row to filter · click again to clear</small></div>
-      <svg id="condition-chart" viewBox="0 0 620 284" role="group" aria-label="Condition shares: click a condition to update every view"></svg>
-      <p class="chart-caption">Closed is an unranked status, shown separately. Multiple conditions can be selected.</p>
+      <svg id="condition-chart" viewBox="0 0 620 284" role="group" aria-label="Condition comparison: click to filter the other views and highlight this row"></svg>
+      <p class="chart-caption"><span id="condition-context"></span><br>Closed is an unranked status. Multiple conditions can be selected; click again to clear.</p>
     </article>
     <article class="chart-panel">
-      <div class="panel-title"><span class="view-number">02</span><div><h2>Across boroughs</h2><p>RQ2 · Which groups contribute to the selected total?</p></div></div>
+      <div class="panel-title"><span class="view-number">02</span><div><h2>Across boroughs</h2><p>RQ2 · Compare borough contributions by count and area.</p></div></div>
       <div class="legend"><span><i class="circle-key"></i>Structure share</span><span><i class="square-key"></i>Deck-area share</span><small>Click a row to filter</small></div>
-      <svg id="borough-chart" viewBox="0 0 620 284" role="group" aria-label="Borough shares: click a borough group to update every view"></svg>
-      <p class="chart-caption">Cross-borough structures form one group. Each structure is counted once.</p>
+      <p class="reference-legend"><span><i class="reference-circle"></i><i class="reference-square"></i> Light marks below each row = full-inventory count / area shares</span></p>
+      <svg id="borough-chart" viewBox="0 0 620 284" role="group" aria-label="Borough comparison: click to filter the other views and highlight this row"></svg>
+      <p class="chart-caption"><span id="borough-context"></span><br>Cross-borough structures are counted once; shares are not within-borough condition rates.</p>
     </article>
     <article class="chart-panel structure-panel">
       <div class="panel-title"><span class="view-number">03</span><div><h2>Individual structures</h2><p>RQ3 · Compare deck area and spans within each condition.</p></div><button id="clear-points" class="text-button" hidden>Clear structure selection</button></div>
       <div class="legend structure-legend"><span><i class="triangle-key"></i>PED-coded</span><span><i class="circle-key"></i>Other codes</span><div id="size-legend" class="size-legend" aria-label="Span bands"></div><small>Hover for details · click a point or drag a box to select</small></div>
       <svg id="structure-chart" viewBox="0 0 1280 300" role="group" aria-label="All selected structures: log deck area, condition rows, span size bands, and bridge-type shapes"></svg>
       <p class="chart-caption">Each step on the horizontal axis means 10 times the area. Marker area shows a span band, not an exact span ratio. Small vertical offsets separate overlapping points.</p>
+      <section class="median-comparison" aria-labelledby="median-title">
+        <h3 id="median-title">Group medians and sample sizes</h3>
+        <p>Medians calculated from individual records, by condition and bridge-code group. Deck area measures size; spans count sections between supports.</p>
+        <div class="table-scroll"><table class="median-table">
+          <thead><tr><th rowspan="2" scope="col">Condition</th><th colspan="3" scope="colgroup">PED-coded</th><th colspan="3" scope="colgroup">Other codes</th></tr>
+          <tr><th scope="col">Count (n)</th><th scope="col">Median area (sq ft)</th><th scope="col">Median spans</th><th scope="col">Count (n)</th><th scope="col">Median area (sq ft)</th><th scope="col">Median spans</th></tr></thead>
+          <tbody id="median-rows"></tbody>
+        </table></div>
+        <p id="median-context" class="chart-caption"></p>
+        <p class="chart-caption">Median = middle value; for an even sample, the middle two are averaged. A median of 2.5 spans does not mean a structure has half a span.</p>
+      </section>
     </article>
   </section>
   <section class="record-section">
     <div class="record-heading"><div><h2>Look closer</h2><p>Click a structure to keep its source details here.</p></div><button id="export-csv" class="text-button">Download selected records ↓</button></div>
     <div id="record-details" class="record-details"><p class="muted">No structure selected. Hover over any point to inspect it, or use the search above to find a BIN or name.</p></div>
   </section>
-  <details class="data-notes"><summary>About the data and its limits</summary><div class="notes-grid"><div><h3>The source</h3><p>NYC DOT, <i>Bridges &amp; Tunnels Annual Condition Report, 2024 Edition</i>, printed pages 32–64. All 813 unique BINs are loaded. The original PDF was retrieved on October 14, 2026.</p><p><a href="https://www.nyc.gov/html/dot/downloads/pdf/dot_bridgereport24.pdf" target="_blank" rel="noopener">Open the original report ↗</a> · Use Reset, then Download selected records, for the full CSV.</p></div><div><h3>What to keep in mind</h3><p>This is a 2024 inventory snapshot, with inspection dates from 2017–2024. Eleven structures use a legacy rating; compare them using the rating-basis filter. The unknown borough record stays in the data. PED-coded includes codes such as PED-O.</p><p>Shares use row-level deck-area sums. The report's open-area footer differs from those sums by 46,199.7 sq ft. Conditions describe the reported inventory, not current safety or a causal effect of bridge size.</p></div></div></details>
-  <footer><span>Counting Crossings · Working prototype</span><span>2024 snapshot · Source: NYC Department of Transportation</span></footer>
+  <details class="data-notes"><summary>About the data and its limits</summary><div class="notes-grid"><div><h3>The source</h3><p>NYC DOT, <i>Bridges &amp; Tunnels Annual Condition Report, 2024 Edition</i>, printed pages 32–64. All 813 unique BINs are loaded. The original PDF was retrieved on October 14, 2026.</p><p><a href="https://www.nyc.gov/html/dot/downloads/pdf/dot_bridgereport24.pdf" target="_blank" rel="noopener">Open the original report ↗</a> · Use Reset, then Download selected records, for the full CSV.</p></div><div><h3>What to keep in mind</h3><p>This is a 2024 inventory snapshot, with inspection dates from 2017–2024. Eleven structures use a legacy rating; compare them using the rating-basis filter. The unknown borough record stays in the data. PED-coded is a derived group: the source bridge-type text contains PED. It does not establish current permitted use.</p><p>Shares use row-level deck-area sums. The report's open-area footer differs from those sums by 46,199.7 sq ft. Conditions describe the reported inventory, not current safety or a causal effect of bridge size.</p></div></div></details>
+  <section id="code-glossary" class="code-glossary" aria-labelledby="glossary-title">
+    <h3 id="glossary-title">What the codes mean</h3>
+    <p><b>PED</b> = Pedestrian · <b>A</b> = Arterial · <b>R</b> = Ramp · <b>O</b> = Off-System · <b>W</b> = Waterway · <b>M</b> = Movable · <b>E</b> = East River · <b>T</b> = Tunnel.</p>
+    <p>Combined labels retain their components: <b>PED-A</b> = Pedestrian / Arterial; <b>PED-O</b> = Pedestrian / Off-System; <b>AR</b> = Arterial / Ramp. These are report codes, not inferred categories.</p>
+    <p><b>NBI-W</b> = National Bridge Inventory Weighted. <b>Legacy exception</b> = one of 11 structures listed in the report as using the earlier rating scale. An older date alone does not imply a legacy rating.</p>
+    <p>2024 report snapshot; recorded inspection dates range from <b>2017–2024</b>. The inspection year and full date are shown for each structure.</p>
+    <p>Definitions: <a href="https://www.nyc.gov/html/dot/downloads/pdf/dot_bridgereport24.pdf#page=30" target="_blank" rel="noopener">report legend, printed p. 28</a>; <a href="https://www.nyc.gov/html/dot/downloads/pdf/dot_bridgereport24.pdf#page=22" target="_blank" rel="noopener">rating method and exceptions, printed pp. 20–21</a>.</p>
+  </section>
+  <footer><span>Counting Crossings · NYC bridge inventory</span><span>2024 snapshot · Source: NYC Department of Transportation</span></footer>
 </main>
 <div id="tooltip" class="tooltip" role="status" hidden></div>
 <noscript>This dashboard needs JavaScript enabled. The source data is available in data/bridges_2024.csv.</noscript>
@@ -839,6 +897,33 @@ window.BRIDGE_DATA = [{"bin":"1065210","boro":"Q","feature_carried":"WHITESTONE 
     return rows.reduce((sum, row) => sum + row.deck_area_sq_ft, 0);
   }
 
+  // A chart keeps its own categories available while other filters narrow its context.
+  function viewRows(rows, filters, view) {
+    if (view === 'condition') return select(rows, {...filters, conditions: []});
+    if (view === 'borough') return select(rows, {...filters, boroughs: []});
+    return select(rows, filters);
+  }
+
+  function median(values) {
+    if (!values.length) return null;
+    const sorted = [...values].sort((a, b) => a - b);
+    const middle = Math.floor(sorted.length / 2);
+    return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+  }
+
+  function comparisonMedians(rows) {
+    return conditions.flatMap(condition => ['PED-coded', 'Other codes'].map(group => {
+      const subset = rows.filter(row => row.condition === condition && row.pedestrian_code === group);
+      return {
+        condition,
+        group,
+        count: subset.length,
+        medianArea: median(subset.map(row => row.deck_area_sq_ft)),
+        medianSpans: median(subset.map(row => row.spans))
+      };
+    }));
+  }
+
   function summarize(rows, field, order) {
     const area = totalArea(rows);
     return order.map(name => {
@@ -883,6 +968,8 @@ window.BRIDGE_DATA = [{"bin":"1065210","boro":"Q","feature_carried":"WHITESTONE 
     markerAreas,
     emptyFilters,
     select,
+    viewRows,
+    comparisonMedians,
     totalArea,
     summarize,
     toggle,
@@ -903,6 +990,8 @@ window.BRIDGE_DATA = [{"bin":"1065210","boro":"Q","feature_carried":"WHITESTONE 
   const number = new Intl.NumberFormat('en-US', {
     maximumFractionDigits: 1
   });
+  const inventoryBoroughs = M.summarize(rows, 'borough_group', M.boroughs);
+  const medianNumber = new Intl.NumberFormat('en-US', {maximumFractionDigits: 2});
   let filters = M.emptyFilters();
   let selected = rows;
   let pinned = null;
@@ -998,26 +1087,29 @@ window.BRIDGE_DATA = [{"bin":"1065210","boro":"Q","feature_carried":"WHITESTONE 
       });
       text(parent, x, bottom + 17, value, {
         'text-anchor': 'middle',
-        'font-size': 10
+        'font-size': 12
       });
     });
     line(parent, left, bottom, right, bottom, {
       stroke: '#afbcbd'
     });
-    text(parent, (left + right) / 2, bottom + 35, 'Share of selected total (%)', {
+    text(parent, (left + right) / 2, bottom + 35, 'Share of comparison total (%)', {
       'text-anchor': 'middle',
-      'font-size': 10
+      'font-size': 12
     });
   }
-  // Both measures use the current selection and the same fixed percentage axis.
+  // Preserve the condition comparison by excluding only its own selection.
   function conditionChart() {
     const chart = $('condition-chart');
     chart.replaceChildren();
-    const groups = M.summarize(selected, 'condition', M.conditions);
+    const population = M.viewRows(rows, filters, 'condition');
+    const groups = M.summarize(population, 'condition', M.conditions);
+    $('condition-context').textContent = `Comparison: ${number.format(population.length)} ${population.length === 1 ? 'structure' : 'structures'}, ${number.format(M.totalArea(population))} sq ft. Includes all conditions; other filters apply. ` + (filters.conditions.length ? 'Highlighted rows are selected; muted rows remain for comparison.' : 'All conditions included.');
     const left = 109,
       right = 538;
     const defs = svg('defs', {}, chart);
     M.conditions.forEach(name => {
+      const hatchStroke = name === 'Very good' ? '#806b20' : M.colors[name];
       const pattern = svg('pattern', {
         id: 'hatch-' + id(name),
         width: 5,
@@ -1031,7 +1123,7 @@ window.BRIDGE_DATA = [{"bin":"1065210","boro":"Q","feature_carried":"WHITESTONE 
         fill: 'white'
       }, pattern);
       line(pattern, 0, 0, 0, 5, {
-        stroke: M.colors[name],
+        stroke: hatchStroke,
         'stroke-width': 2
       });
     });
@@ -1039,10 +1131,15 @@ window.BRIDGE_DATA = [{"bin":"1065210","boro":"Q","feature_carried":"WHITESTONE 
     groups.forEach((group, index) => {
       const y = 18 + index * 43;
       const active = filters.conditions.includes(group.name);
+      const muted = filters.conditions.length > 0 && !active;
       const label =
-        `${group.name}: ${group.count} structures, ${percent(group.countShare)} of selected count, ${percent(group.areaShare)} of selected deck area. Toggle condition filter.`;
+        `${group.name}: ${group.count} structures, ${percent(group.countShare)} of comparison count, ${percent(group.areaShare)} of comparison deck area. Toggle condition filter.`;
       const row = svg('g', {
         id: 'condition-' + id(group.name),
+        class: active ? 'context-selected' : (muted ? 'context-muted' : ''),
+        'data-count': group.count,
+        'data-count-share': group.countShare,
+        'data-area-share': group.areaShare,
         role: 'button',
         tabindex: 0,
         'aria-pressed': active,
@@ -1054,7 +1151,7 @@ window.BRIDGE_DATA = [{"bin":"1065210","boro":"Q","feature_carried":"WHITESTONE 
         width: 615,
         height: 39,
         rx: 3,
-        fill: active ? '#e8f1ed' : 'transparent',
+        fill: active ? '#dcefe7' : 'transparent',
         stroke: 'none'
       }, row);
       text(row, 99, y + 13, group.name, {
@@ -1071,16 +1168,16 @@ window.BRIDGE_DATA = [{"bin":"1065210","boro":"Q","feature_carried":"WHITESTONE 
           width,
           height: 9,
           fill: j === 0 ? M.colors[group.name] : 'url(#hatch-' + id(group.name) + ')',
-          stroke: M.colors[group.name],
-          'stroke-width': .8,
+          stroke: group.name === 'Very good' ? '#806b20' : M.colors[group.name],
+          'stroke-width': 1,
           'pointer-events': 'none'
         }, row);
         text(row, left + width + 6, y + 8 + j * 13, percent(value), {
-          'font-size': 9.5
+          'font-size': 12
         });
       });
       const info =
-        `<b>${escape(group.name)}</b><br>${number.format(group.count)} structures · ${percent(group.countShare)}<br>${number.format(group.area)} sq ft · ${percent(group.areaShare)}<br><span class="tip-muted">Click to toggle this condition</span>`;
+        `<b>${escape(group.name)}</b><br>${number.format(group.count)} structures · ${percent(group.countShare)}<br>${number.format(group.area)} sq ft · ${percent(group.areaShare)}<br><span class="tip-muted">Of ${population.length} comparison records before condition selection. Click to toggle.</span>`;
       tooltip(row, info);
       activate(row, () => {
         filters.conditions = M.toggle(filters.conditions, group.name);
@@ -1092,25 +1189,33 @@ window.BRIDGE_DATA = [{"bin":"1065210","boro":"Q","feature_carried":"WHITESTONE 
       'stroke-dasharray': '3 3',
       'pointer-events': 'none'
     });
-    chart.dataset.recordCount = selected.length;
+    chart.dataset.recordCount = population.length;
   }
   // These are contributions to the selected cohort, not within-borough rates.
   function boroughChart() {
     const chart = $('borough-chart');
     chart.replaceChildren();
-    const groups = M.summarize(selected, 'borough_group', M.boroughs);
+    const population = M.viewRows(rows, filters, 'borough');
+    const groups = M.summarize(population, 'borough_group', M.boroughs);
+    $('borough-context').textContent = `Comparison: ${number.format(population.length)} ${population.length === 1 ? 'structure' : 'structures'}, ${number.format(M.totalArea(population))} sq ft, before borough selection. Other filters apply. Light marks below each row: full 813-record inventory. ` + (filters.boroughs.length ? 'Highlighted rows are selected; muted rows remain for comparison.' : 'All boroughs included.');
     const left = 118,
       right = 498;
     axis(chart, left, right, 245, 9);
     text(chart, 613, 10, 'count / area', {
       'text-anchor': 'end',
-      'font-size': 9
+      'font-size': 11
     });
     groups.forEach((group, index) => {
       const y = 29 + index * 29;
       const active = filters.boroughs.includes(group.name);
+      const muted = filters.boroughs.length > 0 && !active;
+      const baseline = inventoryBoroughs[index];
       const row = svg('g', {
         id: 'borough-' + id(group.name),
+        class: active ? 'context-selected' : (muted ? 'context-muted' : ''),
+        'data-count': group.count,
+        'data-count-share': group.countShare,
+        'data-area-share': group.areaShare,
         role: 'button',
         tabindex: 0,
         'aria-pressed': active,
@@ -1129,42 +1234,34 @@ window.BRIDGE_DATA = [{"bin":"1065210","boro":"Q","feature_carried":"WHITESTONE 
         'font-weight': active ? '700' : '400',
         fill: active ? '#125b54' : '#3e535b'
       });
+      const x = value => left + value / 100 * (right - left);
+      // Two immutable references: count and area have different denominators.
+      const reference = svg('g', {class: 'inventory-reference', 'aria-hidden': 'true'}, row);
+      line(reference, x(baseline.countShare), y + 9, x(baseline.areaShare), y + 9,
+        {stroke: '#879694', 'stroke-width': 1, 'stroke-dasharray': '2 2'});
+      svg('circle', {cx: x(baseline.countShare), cy: y + 9, r: 3,
+        fill: '#b3bfba', stroke: '#71817c', 'stroke-width': .7}, reference);
+      svg('rect', {x: x(baseline.areaShare) - 2.5, y: y + 6.5, width: 5, height: 5,
+        fill: '#fff', stroke: '#71817c', 'stroke-width': .9}, reference);
       if (group.countShare !== null) {
-        const a = left + group.countShare / 100 * (right - left),
-          b = left + group.areaShare / 100 * (right - left);
-        line(row, a, y, b, y, {
-          stroke: '#91a6aa',
-          'stroke-width': 2
-        });
-        svg('circle', {
-          cx: a,
-          cy: y,
-          r: 4.8,
-          fill: '#263e4a'
-        }, row);
-        svg('rect', {
-          x: b - 3.5,
-          y: y - 3.5,
-          width: 7,
-          height: 7,
-          fill: 'white',
-          stroke: '#263e4a',
-          'stroke-width': 1.2
-        }, row);
+        line(row, x(group.countShare), y - 3, x(group.areaShare), y - 3,
+          {stroke: '#91a6aa', 'stroke-width': 2});
+        svg('circle', {cx: x(group.countShare), cy: y - 3, r: 4.8, fill: '#263e4a'}, row);
+        svg('rect', {x: x(group.areaShare) - 3.5, y: y - 6.5, width: 7, height: 7,
+          fill: 'white', stroke: '#263e4a', 'stroke-width': 1.2}, row);
       }
-      text(row, 613, y + 4, `${percent(group.countShare)} / ${percent(group.areaShare)}`, {
-        'text-anchor': 'end',
-        'font-size': 9.5
-      });
+      text(row, 613, y + 4, `${percent(group.countShare)} / ${percent(group.areaShare)}`,
+        {'text-anchor': 'end', 'font-size': 12});
+      const delta = (current, full) => current === null ? 'No comparison records' :
+        `${current - full >= 0 ? '+' : ''}${(current - full).toFixed(1)} percentage points`;
       tooltip(row,
-        `<b>${escape(group.name)}</b><br>${number.format(group.count)} structures · ${percent(group.countShare)}<br>${number.format(group.area)} sq ft · ${percent(group.areaShare)}<br><span class="tip-muted">Share of the current selection, not a within-borough rate</span>`
-        );
+        `<b>${escape(group.name)}</b><br>Comparison count: ${number.format(group.count)} · ${percent(group.countShare)}<br>Inventory count share: ${percent(baseline.countShare)} · ${delta(group.countShare, baseline.countShare)}<br>Comparison area: ${number.format(group.area)} sq ft · ${percent(group.areaShare)}<br>Inventory area share: ${percent(baseline.areaShare)} · ${delta(group.areaShare, baseline.areaShare)}<br><span class="tip-muted">Comparison excludes the borough selection. References always use all 813 records. Not a within-borough condition rate.</span>`);
       activate(row, () => {
         filters.boroughs = M.toggle(filters.boroughs, group.name);
         render();
       });
     });
-    chart.dataset.recordCount = selected.length;
+    chart.dataset.recordCount = population.length;
   }
   // Stable offsets separate overlapping records without creating a new variable.
   function jitter(bin) {
@@ -1196,8 +1293,49 @@ window.BRIDGE_DATA = [{"bin":"1065210","boro":"Q","feature_carried":"WHITESTONE 
     }, parent);
   }
 
+  const codeNames = {PED: 'Pedestrian', A: 'Arterial', R: 'Ramp', O: 'Off-System',
+    W: 'Waterway', M: 'Movable', E: 'East River', T: 'Tunnel'};
+
+  function bridgeCodeLabel(code) {
+    const components = code.match(/PED|[AROWMET]/g) || [];
+    const names = components.map(part => codeNames[part]);
+    return names.length ? `${code} · ${names.join(' / ')}` : code;
+  }
+
+  function ratingLabel(basis) {
+    return basis === 'NBI-W' ? 'National Bridge Inventory Weighted (NBI-W)' :
+      'Legacy exception · report-listed earlier rating scale';
+  }
+
   function recordTip(row) {
-    return `<b>${escape(row.feature_carried)}</b><br><span class="tip-muted">BIN ${escape(row.bin)} · ${escape(row.borough_group)}</span><br>${escape(row.condition)} · ${number.format(row.deck_area_sq_ft)} sq ft<br>${row.spans} spans · ${escape(row.bridge_type)}<br>Inspection: ${escape(row.inspection_date)} · ${escape(row.rating_basis)}<br><span class="tip-muted">Click to select this structure</span>`;
+    return `<b>${escape(row.feature_carried)}</b><br><span class="tip-muted">BIN ${escape(row.bin)} · ${escape(row.borough_group)}</span><br>${escape(row.condition)} · ${number.format(row.deck_area_sq_ft)} sq ft<br>${row.spans} spans<br>Bridge code: ${escape(bridgeCodeLabel(row.bridge_type))}<br><b>Inspection year: ${escape(row.inspection_date.slice(0, 4))}</b><br>Recorded date: ${escape(row.inspection_date)}<br>Rating basis: ${escape(ratingLabel(row.rating_basis))}<br><span class="tip-muted">Reported condition, not current safety. Click to select.</span>`;
+  }
+
+  function medianComparison() {
+    const summary = M.comparisonMedians(selected);
+    const host = $('median-rows');
+    host.replaceChildren();
+    const metric = value => value === null ? '—' : medianNumber.format(value);
+    M.conditions.forEach(condition => {
+      const tr = document.createElement('tr');
+      tr.dataset.condition = condition;
+      const th = document.createElement('th');
+      th.scope = 'row';
+      th.textContent = condition;
+      tr.append(th);
+      for (const group of ['PED-coded', 'Other codes']) {
+        const item = summary.find(d => d.condition === condition && d.group === group);
+        for (const value of [item.count, item.medianArea, item.medianSpans]) {
+          const td = document.createElement('td');
+          td.textContent = metric(value);
+          tr.append(td);
+        }
+      }
+      host.append(tr);
+    });
+    $('median-context').textContent = `All active filters apply: ${number.format(selected.length)} ${selected.length === 1 ? 'record' : 'records'}. ` +
+      (filters.bridgeType ? 'The bridge-group filter excludes the other group; clear it to compare both. ' : '') +
+      'n = number of structures. A dash means no records, not zero. Small groups need caution; medians describe this selection, not a general rule.';
   }
 
   function structureChart() {
@@ -1230,7 +1368,7 @@ window.BRIDGE_DATA = [{"bin":"1065210","boro":"Q","feature_carried":"WHITESTONE 
       });
       text(chart, x, bottom + 19, ['100', '1,000', '10,000', '100,000', '1,000,000'][index], {
         'text-anchor': 'middle',
-        'font-size': 10.5
+        'font-size': 12
       });
     });
     Object.entries(lanes).forEach(([name, y]) => {
@@ -1250,7 +1388,7 @@ window.BRIDGE_DATA = [{"bin":"1065210","boro":"Q","feature_carried":"WHITESTONE 
     });
     text(chart, 1250, 217, 'Closed: separate status', {
       'text-anchor': 'end',
-      'font-size': 9
+      'font-size': 11
     });
     line(chart, left, bottom, right, bottom, {
       stroke: '#a6b5b7'
@@ -1305,11 +1443,11 @@ window.BRIDGE_DATA = [{"bin":"1065210","boro":"Q","feature_carried":"WHITESTONE 
       ['Condition', r.condition],
       ['Deck area', number.format(r.deck_area_sq_ft) + ' sq ft'],
       ['Spans', r.spans + ' (band ' + r.span_band + ')'],
-      ['Bridge type', r.bridge_type],
+      ['Bridge code', bridgeCodeLabel(r.bridge_type)],
       ['Borough', r.borough_group + ' (code ' + r.boro + ')'],
       ['Crosses', r.feature_crossed],
-      ['Inspection date', r.inspection_date],
-      ['Rating source / basis', r.rating_source + ' / ' + r.rating_basis]
+      ['Inspection year / date', r.inspection_date.slice(0, 4) + ' / ' + r.inspection_date],
+      ['Rating source / basis', r.rating_source + ' / ' + ratingLabel(r.rating_basis)]
     ];
     $('record-details').innerHTML =
       `<div class="record-name">${escape(r.feature_carried)}</div><dl class="detail-grid">${details.map(([k,v])=>`<div><dt>${escape(k)}</dt><dd>${escape(v)}</dd></div>`).join('')}<div><dt>Source record</dt><dd><a target="_blank" rel="noopener" href="https://www.nyc.gov/html/dot/downloads/pdf/dot_bridgereport24.pdf#page=${r.source_pdf_page}">Report page ${r.source_printed_page} ↗</a></dd></div></dl>${r.rating_basis==='Legacy exception'?'<p class="detail-note">This structure uses a legacy rating. Its reported label is preserved; use the rating-basis filter to compare inventories with and without legacy cases.</p>':''}`;
@@ -1324,8 +1462,11 @@ window.BRIDGE_DATA = [{"bin":"1065210","boro":"Q","feature_carried":"WHITESTONE 
       b.textContent = label + ' ×';
       b.setAttribute('aria-label', 'Clear ' + label);
       b.addEventListener('click', () => {
+        const index = [...host.querySelectorAll('button')].indexOf(b);
         clear();
         render();
+        const remaining = host.querySelectorAll('button');
+        (remaining[Math.min(index, remaining.length - 1)] || $('reset')).focus({preventScroll: true});
       });
       host.append(b);
     };
@@ -1358,7 +1499,7 @@ window.BRIDGE_DATA = [{"bin":"1065210","boro":"Q","feature_carried":"WHITESTONE 
       host.append(span);
     }
   }
-  // One shared selection feeds every chart, totals, chips and the detail panel.
+  // Totals, records and medians use all filters; summary charts retain their own facet context.
   function render() {
     const focusId = document.activeElement?.id;
     hideTip();
@@ -1367,7 +1508,7 @@ window.BRIDGE_DATA = [{"bin":"1065210","boro":"Q","feature_carried":"WHITESTONE 
     $('record-count').textContent = number.format(selected.length);
     $('area-total').textContent = area >= 1e6 ? (area / 1e6).toFixed(2) + ' million' : number.format(area);
     $('area-exact').textContent = number.format(area) + ' sq ft';
-    $('borough').value = filters.boroughs.length === 1 ? filters.boroughs[0] : '';
+    $('borough').value = filters.boroughs.length > 1 ? '__multiple__' : (filters.boroughs[0] || '');
     $('bridge-type').value = filters.bridgeType;
     $('rating').value = filters.rating;
     $('min-area').value = filters.minArea || '';
@@ -1378,6 +1519,7 @@ window.BRIDGE_DATA = [{"bin":"1065210","boro":"Q","feature_carried":"WHITESTONE 
     conditionChart();
     boroughChart();
     structureChart();
+    medianComparison();
     detailPanel();
     const restore = focusId && $(focusId);
     if (restore && document.activeElement === document.body) restore.focus({
@@ -1486,7 +1628,7 @@ window.BRIDGE_DATA = [{"bin":"1065210","boro":"Q","feature_carried":"WHITESTONE 
     });
     $('size-legend').prepend(document.createTextNode('Span bands: '));
     $('borough').addEventListener('change', event => {
-      filters.boroughs = event.target.value ? [event.target.value] : [];
+      if (event.target.value !== '__multiple__') filters.boroughs = event.target.value ? [event.target.value] : [];
       render();
     });
     $('bridge-type').addEventListener('change', event => {
