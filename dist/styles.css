@@ -337,8 +337,7 @@ button {
 
 svg text {
   font-family: Arial, Helvetica, sans-serif;
-  fill: #52636a;
-  font-size: 11px
+  fill: #52636a
 }
 
 .chart-caption {
@@ -720,3 +719,41 @@ svg .structure-point:focus-visible {
     flex-basis: 100%
   }
 }
+
+/* Preserve comparison context without erasing excluded categories. */
+.context-muted { filter: grayscale(1); }
+.context-muted text { fill: #68767b; }
+.context-muted > rect:not(:first-child), .context-muted > circle, .context-muted > line { opacity: .55; }
+.context-muted:hover > rect, .context-muted:focus-visible > rect { opacity: 1; }
+.control-help { font-size: 13px; line-height: 1.55; margin: 10px 0 2px; }
+.reference-legend { color: #627078; font-size: 12px; margin: 4px 0 8px; }
+.reference-circle, .reference-square { display: inline-block; width: 7px; height: 7px; margin-right: 3px; border: 1px solid #71817c; vertical-align: middle; }
+.reference-circle { border-radius: 50%; background: #b3bfba; }
+.reference-square { background: white; }
+.median-comparison { border-top: 1px solid var(--line); margin-top: 20px; padding-top: 16px; }
+.median-comparison h3, .code-glossary h3 { font-family: Georgia, serif; font-size: 21px; font-weight: 500; margin: 0 0 8px; }
+.median-comparison p { font-size: 13px; line-height: 1.55; }
+.table-scroll { overflow-x: auto; }
+.median-table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+.median-table th, .median-table td { padding: 9px 12px; text-align: right; border-bottom: 1px solid var(--line); }
+.median-table th:first-child { text-align: left; }
+.median-table thead th { background: #eef2ef; font-weight: 600; }
+.median-table th[colspan] { text-align: center; }
+.median-table td:nth-child(5), .median-table thead tr:last-child th:nth-child(4) { border-left: 1px solid var(--line); }
+.median-table tr[data-condition=Closed] th, .median-table tr[data-condition=Closed] td { border-top: 1px dashed #8a9b99; }
+.code-glossary { padding: 20px 0 6px; }
+.code-glossary p { font-size: 14px; line-height: 1.6; max-width: 1000px; }
+.chart-caption { font-size: 12px; line-height: 1.55; }
+@media(max-width:720px) { .median-table { min-width: 650px; } }
+
+/* Selected rows have a distinct boundary; data colors retain their original meaning. */
+.context-selected > rect:first-child { stroke: #438576; stroke-width: 1.4; }
+.context-selected text { fill: #194c43; }
+.context-muted > rect:not(:first-child), .context-muted > circle, .context-muted > line { opacity: .72; }
+.chart-panel > svg { font-size: 12px; }
+.legend { font-size: 12px; }
+.legend small { font-size: 11px; }
+.panel-title p, .record-heading p { font-size: 13px; }
+.filters label { font-size: 13px; }
+.filters input, .filters select { font-size: 14px; }
+.filter-chip, .active-filters .all-label { font-size: 13px; }
