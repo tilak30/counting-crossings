@@ -7,6 +7,8 @@
   const number = new Intl.NumberFormat('en-US', {
     maximumFractionDigits: 1
   });
+  const inventoryBoroughs = M.summarize(rows, 'borough_group', M.boroughs);
+  const medianNumber = new Intl.NumberFormat('en-US', {maximumFractionDigits: 2});
   let filters = M.emptyFilters();
   let selected = rows;
   let pinned = null;
@@ -102,26 +104,29 @@
       });
       text(parent, x, bottom + 17, value, {
         'text-anchor': 'middle',
-        'font-size': 10
+        'font-size': 12
       });
     });
     line(parent, left, bottom, right, bottom, {
       stroke: '#afbcbd'
     });
-    text(parent, (left + right) / 2, bottom + 35, 'Share of selected total (%)', {
+    text(parent, (left + right) / 2, bottom + 35, 'Share of comparison total (%)', {
       'text-anchor': 'middle',
-      'font-size': 10
+      'font-size': 12
     });
   }
-  // Both measures use the current selection and the same fixed percentage axis.
+  // Preserve the condition comparison by excluding only its own selection.
   function conditionChart() {
     const chart = $('condition-chart');
     chart.replaceChildren();
-    const groups = M.summarize(selected, 'condition', M.conditions);
+    const population = M.viewRows(rows, filters, 'condition');
+    const groups = M.summarize(population, 'condition', M.conditions);
+    $('condition-context').textContent = `Comparison: ${number.format(population.length)} ${population.length === 1 ? 'structure' : 'structures'}, ${number.format(M.totalArea(population))} sq ft. Includes all conditions; other filters apply. ` + (filters.conditions.length ? 'Highlighted rows are selected; muted rows remain for comparison.' : 'All conditions included.');
     const left = 109,
       right = 538;
     const defs = svg('defs', {}, chart);
     M.conditions.forEach(name => {
+      const hatchStroke = name === 'Very good' ? '#806b20' : M.colors[name];
       const pattern = svg('pattern', {
         id: 'hatch-' + id(name),
         width: 5,
@@ -135,7 +140,7 @@
         fill: 'white'
       }, pattern);
       line(pattern, 0, 0, 0, 5, {
-        stroke: M.colors[name],
+        stroke: hatchStroke,
         'stroke-width': 2
       });
     });
@@ -143,10 +148,15 @@
     groups.forEach((group, index) => {
       const y = 18 + index * 43;
       const active = filters.conditions.includes(group.name);
+      const muted = filters.conditions.length > 0 && !active;
       const label =
-        `${group.name}: ${group.count} structures, ${percent(group.countShare)} of selected count, ${percent(group.areaShare)} of selected deck area. Toggle condition filter.`;
+        `${group.name}: ${group.count} structures, ${percent(group.countShare)} of comparison count, ${percent(group.areaShare)} of comparison deck area. Toggle condition filter.`;
       const row = svg('g', {
         id: 'condition-' + id(group.name),
+        class: active ? 'context-selected' : (muted ? 'context-muted' : ''),
+        'data-count': group.count,
+        'data-count-share': group.countShare,
+        'data-area-share': group.areaShare,
         role: 'button',
         tabindex: 0,
         'aria-pressed': active,
@@ -158,7 +168,7 @@
         width: 615,
         height: 39,
         rx: 3,
-        fill: active ? '#e8f1ed' : 'transparent',
+        fill: active ? '#dcefe7' : 'transparent',
         stroke: 'none'
       }, row);
       text(row, 99, y + 13, group.name, {
@@ -175,16 +185,16 @@
           width,
           height: 9,
           fill: j === 0 ? M.colors[group.name] : 'url(#hatch-' + id(group.name) + ')',
-          stroke: M.colors[group.name],
-          'stroke-width': .8,
+          stroke: group.name === 'Very good' ? '#806b20' : M.colors[group.name],
+          'stroke-width': 1,
           'pointer-events': 'none'
         }, row);
         text(row, left + width + 6, y + 8 + j * 13, percent(value), {
-          'font-size': 9.5
+          'font-size': 12
         });
       });
       const info =
-        `<b>${escape(group.name)}</b><br>${number.format(group.count)} structures · ${percent(group.countShare)}<br>${number.format(group.area)} sq ft · ${percent(group.areaShare)}<br><span class="tip-muted">Click to toggle this condition</span>`;
+        `<b>${escape(group.name)}</b><br>${number.format(group.count)} structures · ${percent(group.countShare)}<br>${number.format(group.area)} sq ft · ${percent(group.areaShare)}<br><span class="tip-muted">Of ${population.length} comparison records before condition selection. Click to toggle.</span>`;
       tooltip(row, info);
       activate(row, () => {
         filters.conditions = M.toggle(filters.conditions, group.name);
@@ -196,25 +206,33 @@
       'stroke-dasharray': '3 3',
       'pointer-events': 'none'
     });
-    chart.dataset.recordCount = selected.length;
+    chart.dataset.recordCount = population.length;
   }
   // These are contributions to the selected cohort, not within-borough rates.
   function boroughChart() {
     const chart = $('borough-chart');
     chart.replaceChildren();
-    const groups = M.summarize(selected, 'borough_group', M.boroughs);
+    const population = M.viewRows(rows, filters, 'borough');
+    const groups = M.summarize(population, 'borough_group', M.boroughs);
+    $('borough-context').textContent = `Comparison: ${number.format(population.length)} ${population.length === 1 ? 'structure' : 'structures'}, ${number.format(M.totalArea(population))} sq ft, before borough selection. Other filters apply. Light marks below each row: full 813-record inventory. ` + (filters.boroughs.length ? 'Highlighted rows are selected; muted rows remain for comparison.' : 'All boroughs included.');
     const left = 118,
       right = 498;
     axis(chart, left, right, 245, 9);
     text(chart, 613, 10, 'count / area', {
       'text-anchor': 'end',
-      'font-size': 9
+      'font-size': 11
     });
     groups.forEach((group, index) => {
       const y = 29 + index * 29;
       const active = filters.boroughs.includes(group.name);
+      const muted = filters.boroughs.length > 0 && !active;
+      const baseline = inventoryBoroughs[index];
       const row = svg('g', {
         id: 'borough-' + id(group.name),
+        class: active ? 'context-selected' : (muted ? 'context-muted' : ''),
+        'data-count': group.count,
+        'data-count-share': group.countShare,
+        'data-area-share': group.areaShare,
         role: 'button',
         tabindex: 0,
         'aria-pressed': active,
@@ -233,42 +251,34 @@
         'font-weight': active ? '700' : '400',
         fill: active ? '#125b54' : '#3e535b'
       });
+      const x = value => left + value / 100 * (right - left);
+      // Two immutable references: count and area have different denominators.
+      const reference = svg('g', {class: 'inventory-reference', 'aria-hidden': 'true'}, row);
+      line(reference, x(baseline.countShare), y + 9, x(baseline.areaShare), y + 9,
+        {stroke: '#879694', 'stroke-width': 1, 'stroke-dasharray': '2 2'});
+      svg('circle', {cx: x(baseline.countShare), cy: y + 9, r: 3,
+        fill: '#b3bfba', stroke: '#71817c', 'stroke-width': .7}, reference);
+      svg('rect', {x: x(baseline.areaShare) - 2.5, y: y + 6.5, width: 5, height: 5,
+        fill: '#fff', stroke: '#71817c', 'stroke-width': .9}, reference);
       if (group.countShare !== null) {
-        const a = left + group.countShare / 100 * (right - left),
-          b = left + group.areaShare / 100 * (right - left);
-        line(row, a, y, b, y, {
-          stroke: '#91a6aa',
-          'stroke-width': 2
-        });
-        svg('circle', {
-          cx: a,
-          cy: y,
-          r: 4.8,
-          fill: '#263e4a'
-        }, row);
-        svg('rect', {
-          x: b - 3.5,
-          y: y - 3.5,
-          width: 7,
-          height: 7,
-          fill: 'white',
-          stroke: '#263e4a',
-          'stroke-width': 1.2
-        }, row);
+        line(row, x(group.countShare), y - 3, x(group.areaShare), y - 3,
+          {stroke: '#91a6aa', 'stroke-width': 2});
+        svg('circle', {cx: x(group.countShare), cy: y - 3, r: 4.8, fill: '#263e4a'}, row);
+        svg('rect', {x: x(group.areaShare) - 3.5, y: y - 6.5, width: 7, height: 7,
+          fill: 'white', stroke: '#263e4a', 'stroke-width': 1.2}, row);
       }
-      text(row, 613, y + 4, `${percent(group.countShare)} / ${percent(group.areaShare)}`, {
-        'text-anchor': 'end',
-        'font-size': 9.5
-      });
+      text(row, 613, y + 4, `${percent(group.countShare)} / ${percent(group.areaShare)}`,
+        {'text-anchor': 'end', 'font-size': 12});
+      const delta = (current, full) => current === null ? 'No comparison records' :
+        `${current - full >= 0 ? '+' : ''}${(current - full).toFixed(1)} percentage points`;
       tooltip(row,
-        `<b>${escape(group.name)}</b><br>${number.format(group.count)} structures · ${percent(group.countShare)}<br>${number.format(group.area)} sq ft · ${percent(group.areaShare)}<br><span class="tip-muted">Share of the current selection, not a within-borough rate</span>`
-        );
+        `<b>${escape(group.name)}</b><br>Comparison count: ${number.format(group.count)} · ${percent(group.countShare)}<br>Inventory count share: ${percent(baseline.countShare)} · ${delta(group.countShare, baseline.countShare)}<br>Comparison area: ${number.format(group.area)} sq ft · ${percent(group.areaShare)}<br>Inventory area share: ${percent(baseline.areaShare)} · ${delta(group.areaShare, baseline.areaShare)}<br><span class="tip-muted">Comparison excludes the borough selection. References always use all 813 records. Not a within-borough condition rate.</span>`);
       activate(row, () => {
         filters.boroughs = M.toggle(filters.boroughs, group.name);
         render();
       });
     });
-    chart.dataset.recordCount = selected.length;
+    chart.dataset.recordCount = population.length;
   }
   // Stable offsets separate overlapping records without creating a new variable.
   function jitter(bin) {
@@ -300,8 +310,49 @@
     }, parent);
   }
 
+  const codeNames = {PED: 'Pedestrian', A: 'Arterial', R: 'Ramp', O: 'Off-System',
+    W: 'Waterway', M: 'Movable', E: 'East River', T: 'Tunnel'};
+
+  function bridgeCodeLabel(code) {
+    const components = code.match(/PED|[AROWMET]/g) || [];
+    const names = components.map(part => codeNames[part]);
+    return names.length ? `${code} · ${names.join(' / ')}` : code;
+  }
+
+  function ratingLabel(basis) {
+    return basis === 'NBI-W' ? 'National Bridge Inventory Weighted (NBI-W)' :
+      'Legacy exception · report-listed earlier rating scale';
+  }
+
   function recordTip(row) {
-    return `<b>${escape(row.feature_carried)}</b><br><span class="tip-muted">BIN ${escape(row.bin)} · ${escape(row.borough_group)}</span><br>${escape(row.condition)} · ${number.format(row.deck_area_sq_ft)} sq ft<br>${row.spans} spans · ${escape(row.bridge_type)}<br>Inspection: ${escape(row.inspection_date)} · ${escape(row.rating_basis)}<br><span class="tip-muted">Click to select this structure</span>`;
+    return `<b>${escape(row.feature_carried)}</b><br><span class="tip-muted">BIN ${escape(row.bin)} · ${escape(row.borough_group)}</span><br>${escape(row.condition)} · ${number.format(row.deck_area_sq_ft)} sq ft<br>${row.spans} spans<br>Bridge code: ${escape(bridgeCodeLabel(row.bridge_type))}<br><b>Inspection year: ${escape(row.inspection_date.slice(0, 4))}</b><br>Recorded date: ${escape(row.inspection_date)}<br>Rating basis: ${escape(ratingLabel(row.rating_basis))}<br><span class="tip-muted">Reported condition, not current safety. Click to select.</span>`;
+  }
+
+  function medianComparison() {
+    const summary = M.comparisonMedians(selected);
+    const host = $('median-rows');
+    host.replaceChildren();
+    const metric = value => value === null ? '—' : medianNumber.format(value);
+    M.conditions.forEach(condition => {
+      const tr = document.createElement('tr');
+      tr.dataset.condition = condition;
+      const th = document.createElement('th');
+      th.scope = 'row';
+      th.textContent = condition;
+      tr.append(th);
+      for (const group of ['PED-coded', 'Other codes']) {
+        const item = summary.find(d => d.condition === condition && d.group === group);
+        for (const value of [item.count, item.medianArea, item.medianSpans]) {
+          const td = document.createElement('td');
+          td.textContent = metric(value);
+          tr.append(td);
+        }
+      }
+      host.append(tr);
+    });
+    $('median-context').textContent = `All active filters apply: ${number.format(selected.length)} ${selected.length === 1 ? 'record' : 'records'}. ` +
+      (filters.bridgeType ? 'The bridge-group filter excludes the other group; clear it to compare both. ' : '') +
+      'n = number of structures. A dash means no records, not zero. Small groups need caution; medians describe this selection, not a general rule.';
   }
 
   function structureChart() {
@@ -334,7 +385,7 @@
       });
       text(chart, x, bottom + 19, ['100', '1,000', '10,000', '100,000', '1,000,000'][index], {
         'text-anchor': 'middle',
-        'font-size': 10.5
+        'font-size': 12
       });
     });
     Object.entries(lanes).forEach(([name, y]) => {
@@ -354,7 +405,7 @@
     });
     text(chart, 1250, 217, 'Closed: separate status', {
       'text-anchor': 'end',
-      'font-size': 9
+      'font-size': 11
     });
     line(chart, left, bottom, right, bottom, {
       stroke: '#a6b5b7'
@@ -409,11 +460,11 @@
       ['Condition', r.condition],
       ['Deck area', number.format(r.deck_area_sq_ft) + ' sq ft'],
       ['Spans', r.spans + ' (band ' + r.span_band + ')'],
-      ['Bridge type', r.bridge_type],
+      ['Bridge code', bridgeCodeLabel(r.bridge_type)],
       ['Borough', r.borough_group + ' (code ' + r.boro + ')'],
       ['Crosses', r.feature_crossed],
-      ['Inspection date', r.inspection_date],
-      ['Rating source / basis', r.rating_source + ' / ' + r.rating_basis]
+      ['Inspection year / date', r.inspection_date.slice(0, 4) + ' / ' + r.inspection_date],
+      ['Rating source / basis', r.rating_source + ' / ' + ratingLabel(r.rating_basis)]
     ];
     $('record-details').innerHTML =
       `<div class="record-name">${escape(r.feature_carried)}</div><dl class="detail-grid">${details.map(([k,v])=>`<div><dt>${escape(k)}</dt><dd>${escape(v)}</dd></div>`).join('')}<div><dt>Source record</dt><dd><a target="_blank" rel="noopener" href="https://www.nyc.gov/html/dot/downloads/pdf/dot_bridgereport24.pdf#page=${r.source_pdf_page}">Report page ${r.source_printed_page} ↗</a></dd></div></dl>${r.rating_basis==='Legacy exception'?'<p class="detail-note">This structure uses a legacy rating. Its reported label is preserved; use the rating-basis filter to compare inventories with and without legacy cases.</p>':''}`;
@@ -428,8 +479,11 @@
       b.textContent = label + ' ×';
       b.setAttribute('aria-label', 'Clear ' + label);
       b.addEventListener('click', () => {
+        const index = [...host.querySelectorAll('button')].indexOf(b);
         clear();
         render();
+        const remaining = host.querySelectorAll('button');
+        (remaining[Math.min(index, remaining.length - 1)] || $('reset')).focus({preventScroll: true});
       });
       host.append(b);
     };
@@ -462,7 +516,7 @@
       host.append(span);
     }
   }
-  // One shared selection feeds every chart, totals, chips and the detail panel.
+  // Totals, records and medians use all filters; summary charts retain their own facet context.
   function render() {
     const focusId = document.activeElement?.id;
     hideTip();
@@ -471,7 +525,7 @@
     $('record-count').textContent = number.format(selected.length);
     $('area-total').textContent = area >= 1e6 ? (area / 1e6).toFixed(2) + ' million' : number.format(area);
     $('area-exact').textContent = number.format(area) + ' sq ft';
-    $('borough').value = filters.boroughs.length === 1 ? filters.boroughs[0] : '';
+    $('borough').value = filters.boroughs.length > 1 ? '__multiple__' : (filters.boroughs[0] || '');
     $('bridge-type').value = filters.bridgeType;
     $('rating').value = filters.rating;
     $('min-area').value = filters.minArea || '';
@@ -482,6 +536,7 @@
     conditionChart();
     boroughChart();
     structureChart();
+    medianComparison();
     detailPanel();
     const restore = focusId && $(focusId);
     if (restore && document.activeElement === document.body) restore.focus({
@@ -590,7 +645,7 @@
     });
     $('size-legend').prepend(document.createTextNode('Span bands: '));
     $('borough').addEventListener('change', event => {
-      filters.boroughs = event.target.value ? [event.target.value] : [];
+      if (event.target.value !== '__multiple__') filters.boroughs = event.target.value ? [event.target.value] : [];
       render();
     });
     $('bridge-type').addEventListener('change', event => {
