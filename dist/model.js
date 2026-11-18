@@ -50,6 +50,33 @@
     return rows.reduce((sum, row) => sum + row.deck_area_sq_ft, 0);
   }
 
+  // A chart keeps its own categories available while other filters narrow its context.
+  function viewRows(rows, filters, view) {
+    if (view === 'condition') return select(rows, {...filters, conditions: []});
+    if (view === 'borough') return select(rows, {...filters, boroughs: []});
+    return select(rows, filters);
+  }
+
+  function median(values) {
+    if (!values.length) return null;
+    const sorted = [...values].sort((a, b) => a - b);
+    const middle = Math.floor(sorted.length / 2);
+    return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+  }
+
+  function comparisonMedians(rows) {
+    return conditions.flatMap(condition => ['PED-coded', 'Other codes'].map(group => {
+      const subset = rows.filter(row => row.condition === condition && row.pedestrian_code === group);
+      return {
+        condition,
+        group,
+        count: subset.length,
+        medianArea: median(subset.map(row => row.deck_area_sq_ft)),
+        medianSpans: median(subset.map(row => row.spans))
+      };
+    }));
+  }
+
   function summarize(rows, field, order) {
     const area = totalArea(rows);
     return order.map(name => {
@@ -94,6 +121,8 @@
     markerAreas,
     emptyFilters,
     select,
+    viewRows,
+    comparisonMedians,
     totalArea,
     summarize,
     toggle,
