@@ -20,4 +20,6 @@ html = re.sub(r'<p class="project-downloads">.*?</p>', '', html)
 target = ROOT / 'Counting_Crossings.html'
 target.write_text(html)
 (DIST / 'Counting_Crossings.html').write_text(html)
+# GitHub Pages serves the generated root entry, not dist/index.html.
+(ROOT / 'index.html').write_text(html)
 print(f'Built {target.name}: {len(rows)} records, no runtime dependencies.')
