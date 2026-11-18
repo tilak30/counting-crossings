@@ -2,7 +2,7 @@
 
 **Tilak Bhansali | NYU Tandon | Information Visualization | Mini-Project 2**
 
-A working prototype for exploring the 2024 NYC DOT bridge inventory. The starting view includes every record. Selecting a condition, borough or structure recalculates all three charts.
+A working prototype for exploring the 2024 NYC DOT bridge inventory. The starting view includes every record. Linked selections narrow the records while condition and borough charts retain their own comparison context.
 
 ## Open it
 
@@ -20,7 +20,7 @@ On Windows, use `py` instead of `python3`. Open **http://localhost:8000** in a b
 
 1. **How does the reported condition breakdown change when I compare structure counts with total deck area?** The condition view uses paired solid and hatched bars on a common 0-100% scale.
 2. **Which borough groups account for the largest shares of Fair and Poor structures by count and by deck area, and does the leading group change between measures?** Select Fair and Poor in the first chart, then compare the filled count circles and open area squares in the borough view. The default view is broader so visitors can explore other condition groups too.
-3. **Within each condition, how do PED-coded structures compare with other structures in deck area and number of spans?** The structure view uses log deck area, ordered condition lanes, shape for the bridge group, and five ordered sizes for span bands. Exact values are available on hover or focus.
+3. **Within each condition, how do PED-coded structures compare with other structures in deck area and number of spans?** The structure view uses log deck area, ordered condition lanes, shape for the bridge group, and five ordered sizes for span bands. A comparison table gives exact median deck area, median spans and sample size for each condition and bridge-code group. Exact record values are available on hover or focus.
 
 The intended audience is students and New Yorkers interested in infrastructure. The dashboard supports comparison and exploration; reported condition is not a live assessment of safety.
 
@@ -33,14 +33,22 @@ The intended audience is students and New Yorkers interested in infrastructure. 
 - Reset all filters restores 813 records. Empty results show a message, not a misleading zero-percentage comparison.
 - Download selected records exports the current subset. Reset first to export all records. BIN is a string identifier, including some alphanumeric values.
 
-Every displayed share uses the **current selection** as its denominator:
+The comparison population is stated under each chart:
 
-```text
-count share = records in the displayed group / all selected records * 100
-area share  = deck area in the displayed group / all selected deck area * 100
-```
+| Display | Filters used |
+| --- | --- |
+| Headline totals, individual structures, medians and CSV export | All active filters |
+| Condition chart | All filters except the condition selection; selected conditions are highlighted and other conditions are gray |
+| Borough chart | All filters except the borough selection, whether made in the chart or dropdown; selected boroughs are highlighted and other boroughs are gray |
+| Light borough reference marks | Fixed full inventory of 813 records, regardless of filters |
 
-The borough chart shows contributions to a selected cohort. It does not show the percentage of each borough's complete inventory that is in a given condition.
+For either summary chart, count share divides a group's count by its comparison population's count. Area share divides the group's deck area by that comparison population's deck area. Empty populations show a dash, not a fabricated percentage.
+
+For example, Fair + Poor selects 526 records. Adding Manhattan selects 138, but the borough chart still compares all 526 Fair/Poor records. Manhattan therefore remains 138 / 526 = 26.24%, rather than becoming 100%. The condition chart now compares all 189 Manhattan records, retaining the conditions outside Fair/Poor as gray context.
+
+Borough tooltip differences are **percentage-point** differences from each borough's full-inventory count or area share. A greater contribution than the baseline is over-representation in that selected population; it is not the percentage of that borough's inventory in a particular condition. Count and area have separate reference values.
+
+Point and box selections still filter the individual plot itself. Clear the structure-selection chip or use Reset to recover the broader view. This focused revision changes the two summary charts, not the brush interaction.
 
 ## Data and preparation
 
@@ -59,6 +67,9 @@ The frozen report was retrieved on October 14, 2026. It is a publicly downloadab
 - Flag the 11 report-listed legacy exceptions. The rating filter can exclude them; it does not recalculate ratings.
 - PED-coded means the source bridge-type text contains `PED`, including `PED-O`. This is a code grouping, not a claim about every structure's current permitted use.
 - Derive span bands 1, 2-4, 5-9, 10-49 and 50+.
+- Expand bridge-code components from the report legend (printed p. 28): PED Pedestrian, A Arterial, R Ramp, O Off-System, W Waterway, M Movable and E East River. Composite codes retain their source spelling; for example PED-A displays Pedestrian / Arterial and AR displays Arterial / Ramp.
+- NBI-W means National Bridge Inventory Weighted (printed p. 20). Legacy exceptions follow the report's explicit list, not an inferred inspection-year cutoff. BIN 2232120 has a recorded 2019 inspection and is not a listed legacy exception.
+- Tooltips show inspection year prominently and preserve the full recorded date. A 2024 report does not imply every inspection took place in 2024.
 
 **Audit totals:** 813 structures; 15,754,558.3 sq ft; Poor 8, Fair 518, Good 223, Very good 54, Closed 10. Inspection dates range from 2017-11-29 to 2024-12-23. There are 802 NBI-W records and 11 legacy exceptions.
 
@@ -81,20 +92,26 @@ e458da9224e3b4ae45c6d0e45d9f7c70dda9d341c501fb1388b50a3f54149c03
 | Borough group | Nominal | Labeled rows | Seven disjoint categories, with no implied ranking. |
 | Count / area share | Derived quantitative | Paired lengths or aligned positions, always 0-100% | Common scales allow comparisons; fill, hatch and point shape distinguish the measures. |
 
+The original condition fill colors are preserved. A darker outline and hatch make the lightest bars legible; teal row boundaries indicate selection, and gray context marks retain readable labels. Median values display up to two decimal places.
+
 The four cividis colors were sampled at 0.10, 0.36, 0.62 and 0.90. See Matplotlib's cividis colormap: https://matplotlib.org/stable/users/explain/colors/colormaps.html. The app bundles the color values and does not depend on Matplotlib.
 
 The proposal's encodings and three-view layout are retained. Implementation changes are:
 
 - Plain HTML, CSS, JavaScript and SVG replace the planned Python/Plotly Dash runtime. Python remains the data-preparation tool. This allows static hosting and a self-contained offline copy.
-- A rectangular brush is implemented; free-form lasso is deferred. A structure selection filters the plot, rather than retaining unselected points as a dim background. This matches the denominator used in the other charts.
+- A rectangular brush is implemented; free-form lasso is deferred. A structure selection filters the plot, rather than retaining unselected points as a dim background. The two summary charts now retain their own facet context as described above; point selections remain explicit filters in that context.
 - Updates are immediate, with no animated transitions. This removes the need for a motion preference at this stage.
 - The initial view includes the complete inventory. The earlier preliminary findings are not preselected or used as the dashboard's headline.
+- The post-midterm revision retains condition and borough comparison context, adds fixed inventory references and exact medians with n, and explains source codes and inspection dates. See `docs/feedback-review.md` for decisions and `docs/demo-walkthrough.md` for the revised demonstration.
+
+The response to the instructor feedback is also available in `docs/Counting_Crossings_Peer_Review_and_Revisions.docx`.
 
 ## Folder map
 
 | Path | Purpose |
 | --- | --- |
 | `Counting_Crossings.html` | Generated standalone copy; opens directly |
+| `index.html` | Generated GitHub Pages entry point; kept in sync with the standalone copy |
 | `dist/index.html` | Page structure and explanatory labels |
 | `dist/styles.css` | Layout, typography and focus styles |
 | `dist/model.js` | Selection, totals, grouped summaries and validation |
@@ -106,12 +123,12 @@ The proposal's encodings and three-view layout are retained. Implementation chan
 | `scripts/prepare_data.py` | PDF extraction and checks |
 | `scripts/publish_data.py` | Copy validated records into the browser bundle |
 | `scripts/build_standalone.py` | Inline browser assets into the offline HTML |
-| `tests/data.test.js` | Seven data and aggregation checks |
+| `tests/data.test.js` | Thirteen data, aggregation, comparison-context and median checks |
 | `docs/verification.md` | What was checked and what remains unverified |
 
-Edit the separate source files, not the generated standalone copy.
+Edit the separate source files, not either generated root HTML file. After rebuilding, verify that the GitHub Pages entry point and offline copy contain the same app.
 
-## Rebuild the offline copy
+## Rebuild the browser copies
 
 After editing the HTML, CSS or JavaScript:
 
@@ -163,10 +180,10 @@ This has no npm dependencies. Report totals in the tests are independent audit e
 - If a filter gives no results, clear its chip or reset. Multiple filters narrow the data together.
 - Start a box selection on blank space inside the structure plot. Clicking a mark selects that individual record instead.
 - Open CSV files using UTF-8 and treat BIN as text. Excel may otherwise change identifiers. The selected export includes a UTF-8 BOM.
-- A hosted link still needs viewer access enabled before it can be used by a grader. Check it in a signed-out/private window before submission.
+- GitHub Pages is the public submission host. The review preview is separate and private. Check the public URL in a signed-out/private window after an approved deployment; do not submit the private review link.
 
 ## Status and assistance
 
-The data, all three views, basic cross-view filtering, point/box selection, details and export are implemented. Detailed checks are in `docs/verification.md`. Formal usability testing, a full accessibility audit and the in-class peer-feedback session are not claimed as completed.
+The data, all three views, cross-view filtering, comparison context, borough reference marks, median table, point/box selection, details and export are implemented. Detailed checks are in `docs/verification.md`. The supplied professor feedback is documented; this does not establish attendance, peer names or a completed peer session. Formal usability testing and a complete accessibility audit are not claimed. The revision is for private review before any GitHub push.
 
 ChatGPT (Codex) assisted with implementation, data verification, testing and documentation. Source data is from NYC DOT. Review the code and practice the demo so you can explain the choices yourself; follow the course's assistance-disclosure requirements.
