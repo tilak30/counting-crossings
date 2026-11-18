@@ -16,45 +16,66 @@
   </header>
   <section class="intro" aria-label="About this dashboard"><p>Explore how the picture changes when each structure counts equally, or by the area it covers. Start anywhere: click a condition or borough, then inspect the structures behind it.</p><button id="reset" class="reset">Reset all filters <span aria-hidden="true">↺</span></button></section>
   <section class="filters" aria-label="Filter the inventory">
-    <label>Borough<select id="borough" aria-label="Borough"><option value="">All borough groups</option></select></label>
+    <label>Borough<select id="borough" aria-label="Borough"><option value="">All borough groups</option><option value="__multiple__" disabled>Multiple boroughs selected</option></select></label>
     <label>Bridge group<select id="bridge-type" aria-label="Bridge group"><option value="">All bridge codes</option><option>PED-coded</option><option>Other codes</option></select></label>
     <label>Rating basis<select id="rating" aria-label="Rating basis"><option value="">All rating bases</option><option>NBI-W</option><option>Legacy exception</option></select></label>
     <label>Minimum deck area (sq ft)<input id="min-area" aria-label="Minimum deck area (sq ft)" type="number" min="0" step="100" placeholder="No minimum"></label>
     <label class="search-label">Find a structure<input id="search" aria-label="Find a structure" type="search" placeholder="BIN, bridge or crossed feature"></label>
   </section>
+  <p class="control-help">Bridge groups follow the report codes: PED = Pedestrian. PED-coded includes any code containing PED, such as PED-A. <a href="#code-glossary">Code glossary</a></p>
   <div id="active-filters" class="active-filters" aria-label="Active filters"></div>
   <section class="summary" aria-label="Selected inventory totals" aria-live="polite">
     <div><span class="stat-label">Structures selected</span><strong id="record-count">Loading…</strong><span id="record-note">of 813 inventory records</span></div>
     <div><span class="stat-label">Selected deck area</span><strong id="area-total">Loading…</strong><span id="area-exact">square feet</span></div>
-    <div><span class="stat-label">How to read the shares</span><p>Each percentage uses the <b>current selection</b>. A borough share is its contribution to that selection.</p></div>
+    <div><span class="stat-label">How to read the shares</span><p>Totals and individual records use <b>all filters</b>. Each summary chart keeps its own category comparison; read the comparison note below it.</p></div>
   </section>
   <div id="empty-state" class="empty-state" hidden>No structures match these filters. Clear a filter above or reset to the full inventory.</div>
   <section id="dashboard" class="dashboard" aria-label="Three linked views">
     <article class="chart-panel">
       <div class="panel-title"><span class="view-number">01</span><div><h2>Condition mix</h2><p>RQ1 · Count each structure, then weight by area.</p></div></div>
       <div class="legend"><span><i class="solid-key"></i>Structure share</span><span><i class="hatch-key"></i>Deck-area share</span><small>Click a row to filter · click again to clear</small></div>
-      <svg id="condition-chart" viewBox="0 0 620 284" role="group" aria-label="Condition shares: click a condition to update every view"></svg>
-      <p class="chart-caption">Closed is an unranked status, shown separately. Multiple conditions can be selected.</p>
+      <svg id="condition-chart" viewBox="0 0 620 284" role="group" aria-label="Condition comparison: click to filter the other views and highlight this row"></svg>
+      <p class="chart-caption"><span id="condition-context"></span><br>Closed is an unranked status. Multiple conditions can be selected; click again to clear.</p>
     </article>
     <article class="chart-panel">
-      <div class="panel-title"><span class="view-number">02</span><div><h2>Across boroughs</h2><p>RQ2 · Which groups contribute to the selected total?</p></div></div>
+      <div class="panel-title"><span class="view-number">02</span><div><h2>Across boroughs</h2><p>RQ2 · Compare borough contributions by count and area.</p></div></div>
       <div class="legend"><span><i class="circle-key"></i>Structure share</span><span><i class="square-key"></i>Deck-area share</span><small>Click a row to filter</small></div>
-      <svg id="borough-chart" viewBox="0 0 620 284" role="group" aria-label="Borough shares: click a borough group to update every view"></svg>
-      <p class="chart-caption">Cross-borough structures form one group. Each structure is counted once.</p>
+      <p class="reference-legend"><span><i class="reference-circle"></i><i class="reference-square"></i> Light marks below each row = full-inventory count / area shares</span></p>
+      <svg id="borough-chart" viewBox="0 0 620 284" role="group" aria-label="Borough comparison: click to filter the other views and highlight this row"></svg>
+      <p class="chart-caption"><span id="borough-context"></span><br>Cross-borough structures are counted once; shares are not within-borough condition rates.</p>
     </article>
     <article class="chart-panel structure-panel">
       <div class="panel-title"><span class="view-number">03</span><div><h2>Individual structures</h2><p>RQ3 · Compare deck area and spans within each condition.</p></div><button id="clear-points" class="text-button" hidden>Clear structure selection</button></div>
       <div class="legend structure-legend"><span><i class="triangle-key"></i>PED-coded</span><span><i class="circle-key"></i>Other codes</span><div id="size-legend" class="size-legend" aria-label="Span bands"></div><small>Hover for details · click a point or drag a box to select</small></div>
       <svg id="structure-chart" viewBox="0 0 1280 300" role="group" aria-label="All selected structures: log deck area, condition rows, span size bands, and bridge-type shapes"></svg>
       <p class="chart-caption">Each step on the horizontal axis means 10 times the area. Marker area shows a span band, not an exact span ratio. Small vertical offsets separate overlapping points.</p>
+      <section class="median-comparison" aria-labelledby="median-title">
+        <h3 id="median-title">Group medians and sample sizes</h3>
+        <p>Medians calculated from individual records, by condition and bridge-code group. Deck area measures size; spans count sections between supports.</p>
+        <div class="table-scroll"><table class="median-table">
+          <thead><tr><th rowspan="2" scope="col">Condition</th><th colspan="3" scope="colgroup">PED-coded</th><th colspan="3" scope="colgroup">Other codes</th></tr>
+          <tr><th scope="col">Count (n)</th><th scope="col">Median area (sq ft)</th><th scope="col">Median spans</th><th scope="col">Count (n)</th><th scope="col">Median area (sq ft)</th><th scope="col">Median spans</th></tr></thead>
+          <tbody id="median-rows"></tbody>
+        </table></div>
+        <p id="median-context" class="chart-caption"></p>
+        <p class="chart-caption">Median = middle value; for an even sample, the middle two are averaged. A median of 2.5 spans does not mean a structure has half a span.</p>
+      </section>
     </article>
   </section>
   <section class="record-section">
     <div class="record-heading"><div><h2>Look closer</h2><p>Click a structure to keep its source details here.</p></div><button id="export-csv" class="text-button">Download selected records ↓</button></div>
     <div id="record-details" class="record-details"><p class="muted">No structure selected. Hover over any point to inspect it, or use the search above to find a BIN or name.</p></div>
   </section>
-  <details class="data-notes"><summary>About the data and its limits</summary><div class="notes-grid"><div><h3>The source</h3><p>NYC DOT, <i>Bridges &amp; Tunnels Annual Condition Report, 2024 Edition</i>, printed pages 32–64. All 813 unique BINs are loaded. The original PDF was retrieved on October 14, 2026.</p><p><a href="https://www.nyc.gov/html/dot/downloads/pdf/dot_bridgereport24.pdf" target="_blank" rel="noopener">Open the original report ↗</a> · <a href="data/bridges_2024.csv" download>Download the full CSV</a></p><p class="project-downloads"><a href="Counting_Crossings.html" download>Download an offline copy</a> · <a href="Counting_Crossings_Source.zip" download>Download source and data</a></p></div><div><h3>What to keep in mind</h3><p>This is a 2024 inventory snapshot, with inspection dates from 2017–2024. Eleven structures use a legacy rating; compare them using the rating-basis filter. The unknown borough record stays in the data. PED-coded includes codes such as PED-O.</p><p>Shares use row-level deck-area sums. The report's open-area footer differs from those sums by 46,199.7 sq ft. Conditions describe the reported inventory, not current safety or a causal effect of bridge size.</p></div></div></details>
-  <footer><span>Counting Crossings · Working prototype</span><span>2024 snapshot · Source: NYC Department of Transportation</span></footer>
+  <details class="data-notes"><summary>About the data and its limits</summary><div class="notes-grid"><div><h3>The source</h3><p>NYC DOT, <i>Bridges &amp; Tunnels Annual Condition Report, 2024 Edition</i>, printed pages 32–64. All 813 unique BINs are loaded. The original PDF was retrieved on October 14, 2026.</p><p><a href="https://www.nyc.gov/html/dot/downloads/pdf/dot_bridgereport24.pdf" target="_blank" rel="noopener">Open the original report ↗</a> · <a href="data/bridges_2024.csv" download>Download the full CSV</a></p><p class="project-downloads"><a href="Counting_Crossings.html" download>Download an offline copy</a> · <a href="https://github.com/tilak30/counting-crossings" target="_blank" rel="noopener">Source repository and data</a></p></div><div><h3>What to keep in mind</h3><p>This is a 2024 inventory snapshot, with inspection dates from 2017–2024. Eleven structures use a legacy rating; compare them using the rating-basis filter. The unknown borough record stays in the data. PED-coded is a derived group: the source bridge-type text contains PED. It does not establish current permitted use.</p><p>Shares use row-level deck-area sums. The report's open-area footer differs from those sums by 46,199.7 sq ft. Conditions describe the reported inventory, not current safety or a causal effect of bridge size.</p></div></div></details>
+  <section id="code-glossary" class="code-glossary" aria-labelledby="glossary-title">
+    <h3 id="glossary-title">What the codes mean</h3>
+    <p><b>PED</b> = Pedestrian · <b>A</b> = Arterial · <b>R</b> = Ramp · <b>O</b> = Off-System · <b>W</b> = Waterway · <b>M</b> = Movable · <b>E</b> = East River · <b>T</b> = Tunnel.</p>
+    <p>Combined labels retain their components: <b>PED-A</b> = Pedestrian / Arterial; <b>PED-O</b> = Pedestrian / Off-System; <b>AR</b> = Arterial / Ramp. These are report codes, not inferred categories.</p>
+    <p><b>NBI-W</b> = National Bridge Inventory Weighted. <b>Legacy exception</b> = one of 11 structures listed in the report as using the earlier rating scale. An older date alone does not imply a legacy rating.</p>
+    <p>2024 report snapshot; recorded inspection dates range from <b>2017–2024</b>. The inspection year and full date are shown for each structure.</p>
+    <p>Definitions: <a href="https://www.nyc.gov/html/dot/downloads/pdf/dot_bridgereport24.pdf#page=30" target="_blank" rel="noopener">report legend, printed p. 28</a>; <a href="https://www.nyc.gov/html/dot/downloads/pdf/dot_bridgereport24.pdf#page=22" target="_blank" rel="noopener">rating method and exceptions, printed pp. 20–21</a>.</p>
+  </section>
+  <footer><span>Counting Crossings · NYC bridge inventory</span><span>2024 snapshot · Source: NYC Department of Transportation</span></footer>
 </main>
 <div id="tooltip" class="tooltip" role="status" hidden></div>
 <noscript>This dashboard needs JavaScript enabled. The source data is available in data/bridges_2024.csv.</noscript>
