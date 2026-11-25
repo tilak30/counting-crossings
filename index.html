@@ -766,6 +766,43 @@ svg .structure-point:focus-visible {
 .filters input, .filters select { font-size: 14px; }
 .filter-chip, .active-filters .all-label { font-size: 13px; }
 
+/* Brief update cue, separate from the persistent selection treatment. */
+.chart-panel { position: relative; min-width: 0; }
+.update-cue {
+  display: inline-block;
+  flex: 0 0 auto;
+  margin-left: auto;
+  border: 1px solid #438576;
+  border-radius: 9px;
+  padding: 2px 8px;
+  color: #194c43;
+  background: #e8f1ed;
+  font-size: 11px;
+  line-height: 1.4;
+}
+.chart-panel.chart-updated {
+  box-shadow: inset 0 0 0 2px #438576;
+  animation: cross-filter-outline 1.45s ease-out both;
+}
+.chart-updated .update-cue { animation: cross-filter-label 1.45s ease-out both; }
+@keyframes cross-filter-outline {
+  0%, 44% { box-shadow: inset 0 0 0 2px #438576; }
+  100% { box-shadow: inset 0 0 0 2px transparent; }
+}
+@keyframes cross-filter-label {
+  0%, 50% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chart-panel.chart-updated, .chart-updated .update-cue { animation: none; }
+}
+@media (max-width: 720px) {
+  .chart-panel:has(> #condition-chart), .chart-panel:has(> #borough-chart) { overflow-x: auto; }
+  #condition-chart, #borough-chart { min-width: 270px; }
+  .structure-panel .panel-title { flex-wrap: wrap; }
+  .structure-panel .update-cue { margin-left: 0; }
+}
+
 </style>
 </head>
 <body>
@@ -793,20 +830,20 @@ svg .structure-point:focus-visible {
   <div id="empty-state" class="empty-state" hidden>No structures match these filters. Clear a filter above or reset to the full inventory.</div>
   <section id="dashboard" class="dashboard" aria-label="Three linked views">
     <article class="chart-panel">
-      <div class="panel-title"><span class="view-number">01</span><div><h2>Condition mix</h2><p>RQ1 · Count each structure, then weight by area.</p></div></div>
+      <div class="panel-title"><span class="view-number">01</span><div><h2>Condition mix</h2><p>RQ1 · Count each structure, then weight by area.</p></div><span class="update-cue" aria-hidden="true" hidden>Updated</span></div>
       <div class="legend"><span><i class="solid-key"></i>Structure share</span><span><i class="hatch-key"></i>Deck-area share</span><small>Click a row to filter · click again to clear</small></div>
       <svg id="condition-chart" viewBox="0 0 620 284" role="group" aria-label="Condition comparison: click to filter the other views and highlight this row"></svg>
       <p class="chart-caption"><span id="condition-context"></span><br>Closed is an unranked status. Multiple conditions can be selected; click again to clear.</p>
     </article>
     <article class="chart-panel">
-      <div class="panel-title"><span class="view-number">02</span><div><h2>Across boroughs</h2><p>RQ2 · Compare borough contributions by count and area.</p></div></div>
+      <div class="panel-title"><span class="view-number">02</span><div><h2>Across boroughs</h2><p>RQ2 · Compare borough contributions by count and area.</p></div><span class="update-cue" aria-hidden="true" hidden>Updated</span></div>
       <div class="legend"><span><i class="circle-key"></i>Structure share</span><span><i class="square-key"></i>Deck-area share</span><small>Click a row to filter</small></div>
       <p class="reference-legend"><span><i class="reference-circle"></i><i class="reference-square"></i> Light marks below each row = full-inventory count / area shares</span></p>
       <svg id="borough-chart" viewBox="0 0 620 284" role="group" aria-label="Borough comparison: click to filter the other views and highlight this row"></svg>
       <p class="chart-caption"><span id="borough-context"></span><br>Cross-borough structures are counted once; shares are not within-borough condition rates.</p>
     </article>
     <article class="chart-panel structure-panel">
-      <div class="panel-title"><span class="view-number">03</span><div><h2>Individual structures</h2><p>RQ3 · Compare deck area and spans within each condition.</p></div><button id="clear-points" class="text-button" hidden>Clear structure selection</button></div>
+      <div class="panel-title"><span class="view-number">03</span><div><h2>Individual structures</h2><p>RQ3 · Compare deck area and spans within each condition.</p></div><span class="update-cue" aria-hidden="true" hidden>Updated</span><button id="clear-points" class="text-button" hidden>Clear structure selection</button></div>
       <div class="legend structure-legend"><span><i class="triangle-key"></i>PED-coded</span><span><i class="circle-key"></i>Other codes</span><div id="size-legend" class="size-legend" aria-label="Span bands"></div><small>Hover for details · click a point or drag a box to select</small></div>
       <svg id="structure-chart" viewBox="0 0 1280 300" role="group" aria-label="All selected structures: log deck area, condition rows, span size bands, and bridge-type shapes"></svg>
       <p class="chart-caption">Each step on the horizontal axis means 10 times the area. Marker area shows a span band, not an exact span ratio. Small vertical offsets separate overlapping points.</p>
@@ -981,9 +1018,83 @@ window.BRIDGE_DATA = [{"bin":"1065210","boro":"Q","feature_carried":"WHITESTONE 
 
 </script>
 <script>
+(function () {
+  'use strict';
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const last = new Map();
+  const timers = new WeakMap();
+  const duration = 340;
+
+  // Remember the actual on-screen geometry, including interrupted transitions.
+  function capture(svg) {
+    return new Map([...svg.querySelectorAll('[data-motion]')].map(node =>
+      [node.dataset.motion, node]));
+  }
+
+  function move(node, previous, attributes, animate) {
+    if (!animate || reduced.matches || !previous) return;
+    const starts = {};
+    const ends = {};
+    for (const [name, target] of Object.entries(attributes)) {
+      const raw = previous.getAttribute(name);
+      if (raw !== null && Number.isFinite(Number(raw)) && Math.abs(Number(raw) - target) > .01) {
+        starts[name] = Number(raw);
+        ends[name] = target;
+      }
+    }
+    if (!Object.keys(starts).length) return;
+    for (const [name, value] of Object.entries(starts)) node.setAttribute(name, value);
+    const start = performance.now();
+    function frame(now) {
+      // A rapid filter change replaces these marks; do not animate stale nodes.
+      if (!node.isConnected) return;
+      const t = reduced.matches ? 1 : Math.min(1, (now - start) / duration);
+      const eased = 1 - (1 - t) ** 3;
+      for (const [name, target] of Object.entries(ends)) {
+        node.setAttribute(name, starts[name] + (target - starts[name]) * eased);
+      }
+      if (t < 1) requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function changed(svg, records, interactive) {
+    // Record identity matters: equal-size selections can still change the data.
+    const key = records.map(row => row.bin).join(',');
+    const before = last.get(svg);
+    last.set(svg, key);
+    const didChange = interactive && before !== undefined && key !== before;
+    if (interactive) {
+      const panel = svg.closest('.chart-panel');
+      const cue = panel.querySelector('.update-cue');
+      clearTimeout(timers.get(panel));
+      panel.classList.remove('chart-updated');
+      cue.hidden = !didChange;
+      if (!didChange) return false;
+      void panel.offsetWidth; // Restart the cue on consecutive filter clicks.
+      panel.classList.add('chart-updated');
+      timers.set(panel, setTimeout(() => {
+        panel.classList.remove('chart-updated');
+        cue.hidden = true;
+      }, reduced.matches ? 1800 : 1450));
+    }
+    return didChange;
+  }
+
+  function fadePoints(group, animate) {
+    if (!animate || reduced.matches) return;
+    group.animate([{opacity: .55}, {opacity: 1}], {duration, easing: 'ease-out'});
+  }
+
+  window.ChartMotion = {capture, move, changed, fadePoints};
+})();
+
+</script>
+<script>
 (function() {
   'use strict';
   const M = window.BridgeModel;
+  const motion = window.ChartMotion;
   const rows = window.BRIDGE_DATA;
   const $ = id => document.getElementById(id);
   const ns = 'http://www.w3.org/2000/svg';
@@ -1079,6 +1190,12 @@ window.BRIDGE_DATA = [{"bin":"1065210","boro":"Q","feature_carried":"WHITESTONE 
     element.addEventListener('blur', hideTip);
   }
 
+  function summaryWidth(chart) {
+    const width = Math.max(300, Math.min(620, Math.round(chart.clientWidth) || 620));
+    chart.setAttribute('viewBox', `0 0 ${width} 284`);
+    return width;
+  }
+
   function axis(parent, left, right, bottom, top) {
     [0, 25, 50, 75, 100].forEach(value => {
       const x = left + (right - left) * value / 100;
@@ -1099,14 +1216,17 @@ window.BRIDGE_DATA = [{"bin":"1065210","boro":"Q","feature_carried":"WHITESTONE 
     });
   }
   // Preserve the condition comparison by excluding only its own selection.
-  function conditionChart() {
+  function conditionChart(interactive) {
     const chart = $('condition-chart');
+    const previous = motion.capture(chart);
     chart.replaceChildren();
     const population = M.viewRows(rows, filters, 'condition');
+    const animate = motion.changed(chart, population, interactive);
+    const width = summaryWidth(chart);
     const groups = M.summarize(population, 'condition', M.conditions);
     $('condition-context').textContent = `Comparison: ${number.format(population.length)} ${population.length === 1 ? 'structure' : 'structures'}, ${number.format(M.totalArea(population))} sq ft. Includes all conditions; other filters apply. ` + (filters.conditions.length ? 'Highlighted rows are selected; muted rows remain for comparison.' : 'All conditions included.');
-    const left = 109,
-      right = 538;
+    const left = width < 450 ? 91 : 109,
+      right = width - 74;
     const defs = svg('defs', {}, chart);
     M.conditions.forEach(name => {
       const hatchStroke = name === 'Very good' ? '#806b20' : M.colors[name];
@@ -1148,13 +1268,13 @@ window.BRIDGE_DATA = [{"bin":"1065210","boro":"Q","feature_carried":"WHITESTONE 
       svg('rect', {
         x: 0,
         y: y - 6,
-        width: 615,
+        width: width - 5,
         height: 39,
         rx: 3,
         fill: active ? '#dcefe7' : 'transparent',
         stroke: 'none'
       }, row);
-      text(row, 99, y + 13, group.name, {
+      text(row, left - 10, y + 13, group.name, {
         'text-anchor': 'end',
         fill: active ? '#125b54' : '#3e535b',
         'font-weight': active ? '700' : '400'
@@ -1162,7 +1282,9 @@ window.BRIDGE_DATA = [{"bin":"1065210","boro":"Q","feature_carried":"WHITESTONE 
       const values = [group.countShare, group.areaShare];
       values.forEach((value, j) => {
         const width = (value || 0) / 100 * (right - left);
-        svg('rect', {
+        const key = `bar-${group.name}-${j}`;
+        const bar = svg('rect', {
+          'data-motion': key,
           x: left,
           y: y + j * 13,
           width,
@@ -1172,9 +1294,14 @@ window.BRIDGE_DATA = [{"bin":"1065210","boro":"Q","feature_carried":"WHITESTONE 
           'stroke-width': 1,
           'pointer-events': 'none'
         }, row);
-        text(row, left + width + 6, y + 8 + j * 13, percent(value), {
+        const name = key + '-label';
+        const labelX = left + width + 6;
+        const markLabel = text(row, labelX, y + 8 + j * 13, percent(value), {
+          'data-motion': name,
           'font-size': 12
         });
+        motion.move(bar, previous.get(key), {width}, animate);
+        motion.move(markLabel, previous.get(name), {x: labelX}, animate);
       });
       const info =
         `<b>${escape(group.name)}</b><br>${number.format(group.count)} structures · ${percent(group.countShare)}<br>${number.format(group.area)} sq ft · ${percent(group.areaShare)}<br><span class="tip-muted">Of ${population.length} comparison records before condition selection. Click to toggle.</span>`;
@@ -1184,7 +1311,7 @@ window.BRIDGE_DATA = [{"bin":"1065210","boro":"Q","feature_carried":"WHITESTONE 
         render();
       });
     });
-    line(chart, 4, 181, 610, 181, {
+    line(chart, 4, 181, width - 10, 181, {
       stroke: '#b5c0c0',
       'stroke-dasharray': '3 3',
       'pointer-events': 'none'
@@ -1192,16 +1319,19 @@ window.BRIDGE_DATA = [{"bin":"1065210","boro":"Q","feature_carried":"WHITESTONE 
     chart.dataset.recordCount = population.length;
   }
   // These are contributions to the selected cohort, not within-borough rates.
-  function boroughChart() {
+  function boroughChart(interactive) {
     const chart = $('borough-chart');
+    const previous = motion.capture(chart);
     chart.replaceChildren();
     const population = M.viewRows(rows, filters, 'borough');
+    const animate = motion.changed(chart, population, interactive);
+    const width = summaryWidth(chart);
     const groups = M.summarize(population, 'borough_group', M.boroughs);
     $('borough-context').textContent = `Comparison: ${number.format(population.length)} ${population.length === 1 ? 'structure' : 'structures'}, ${number.format(M.totalArea(population))} sq ft, before borough selection. Other filters apply. Light marks below each row: full 813-record inventory. ` + (filters.boroughs.length ? 'Highlighted rows are selected; muted rows remain for comparison.' : 'All boroughs included.');
-    const left = 118,
-      right = 498;
+    const left = width < 450 ? 94 : 118,
+      right = width - 98;
     axis(chart, left, right, 245, 9);
-    text(chart, 613, 10, 'count / area', {
+    text(chart, width - 7, 10, 'count / area', {
       'text-anchor': 'end',
       'font-size': 11
     });
@@ -1224,12 +1354,12 @@ window.BRIDGE_DATA = [{"bin":"1065210","boro":"Q","feature_carried":"WHITESTONE 
       svg('rect', {
         x: 0,
         y: y - 13,
-        width: 618,
+        width: width - 2,
         height: 27,
         rx: 3,
         fill: active ? '#e8f1ed' : 'transparent'
       }, row);
-      text(row, 108, y + 4, group.name, {
+      text(row, left - 8, y + 4, group.name, {
         'text-anchor': 'end',
         'font-weight': active ? '700' : '400',
         fill: active ? '#125b54' : '#3e535b'
@@ -1244,13 +1374,21 @@ window.BRIDGE_DATA = [{"bin":"1065210","boro":"Q","feature_carried":"WHITESTONE 
       svg('rect', {x: x(baseline.areaShare) - 2.5, y: y + 6.5, width: 5, height: 5,
         fill: '#fff', stroke: '#71817c', 'stroke-width': .9}, reference);
       if (group.countShare !== null) {
-        line(row, x(group.countShare), y - 3, x(group.areaShare), y - 3,
-          {stroke: '#91a6aa', 'stroke-width': 2});
-        svg('circle', {cx: x(group.countShare), cy: y - 3, r: 4.8, fill: '#263e4a'}, row);
-        svg('rect', {x: x(group.areaShare) - 3.5, y: y - 6.5, width: 7, height: 7,
+        const countX = x(group.countShare);
+        const areaX = x(group.areaShare);
+        const key = id(group.name);
+        const connector = line(row, countX, y - 3, areaX, y - 3,
+          {'data-motion': key + '-link', stroke: '#91a6aa', 'stroke-width': 2});
+        const countMark = svg('circle', {'data-motion': key + '-count',
+          cx: countX, cy: y - 3, r: 4.8, fill: '#263e4a'}, row);
+        const areaMark = svg('rect', {'data-motion': key + '-area',
+          x: areaX - 3.5, y: y - 6.5, width: 7, height: 7,
           fill: 'white', stroke: '#263e4a', 'stroke-width': 1.2}, row);
+        motion.move(connector, previous.get(key + '-link'), {x1: countX, x2: areaX}, animate);
+        motion.move(countMark, previous.get(key + '-count'), {cx: countX}, animate);
+        motion.move(areaMark, previous.get(key + '-area'), {x: areaX - 3.5}, animate);
       }
-      text(row, 613, y + 4, `${percent(group.countShare)} / ${percent(group.areaShare)}`,
+      text(row, width - 7, y + 4, `${percent(group.countShare)} / ${percent(group.areaShare)}`,
         {'text-anchor': 'end', 'font-size': 12});
       const delta = (current, full) => current === null ? 'No comparison records' :
         `${current - full >= 0 ? '+' : ''}${(current - full).toFixed(1)} percentage points`;
@@ -1338,9 +1476,10 @@ window.BRIDGE_DATA = [{"bin":"1065210","boro":"Q","feature_carried":"WHITESTONE 
       'n = number of structures. A dash means no records, not zero. Small groups need caution; medians describe this selection, not a general rule.';
   }
 
-  function structureChart() {
+  function structureChart(interactive) {
     const chart = $('structure-chart');
     chart.replaceChildren();
+    const animate = motion.changed(chart, selected, interactive);
     const left = 108,
       right = 1245,
       top = 12,
@@ -1398,6 +1537,7 @@ window.BRIDGE_DATA = [{"bin":"1065210","boro":"Q","feature_carried":"WHITESTONE 
       'font-size': 11
     });
     plotted = [];
+    const marks = svg('g', {class: 'structure-marks'}, chart);
     [...selected].sort((a, b) => M.markerAreas[b.span_band] - M.markerAreas[a.span_band] || a.bin
       .localeCompare(b.bin)).forEach(row => {
       const x = left + (Math.log10(row.deck_area_sq_ft) - 2) / 4 * (right - left);
@@ -1407,7 +1547,7 @@ window.BRIDGE_DATA = [{"bin":"1065210","boro":"Q","feature_carried":"WHITESTONE 
         y,
         row
       });
-      const point = drawMarker(chart, x, y, M.markerAreas[row.span_band], row.pedestrian_code ===
+      const point = drawMarker(marks, x, y, M.markerAreas[row.span_band], row.pedestrian_code ===
         'PED-coded', {
           id: 'point-' + row.bin,
           class: 'structure-point',
@@ -1429,6 +1569,7 @@ window.BRIDGE_DATA = [{"bin":"1065210","boro":"Q","feature_carried":"WHITESTONE 
     });
     chart.dataset.recordCount = selected.length;
     chart.dataset.markCount = plotted.length;
+    motion.fadePoints(marks, animate);
   }
 
   function detailPanel() {
@@ -1500,7 +1641,7 @@ window.BRIDGE_DATA = [{"bin":"1065210","boro":"Q","feature_carried":"WHITESTONE 
     }
   }
   // Totals, records and medians use all filters; summary charts retain their own facet context.
-  function render() {
+  function render(interactive = true) {
     const focusId = document.activeElement?.id;
     hideTip();
     selected = M.select(rows, filters);
@@ -1516,9 +1657,9 @@ window.BRIDGE_DATA = [{"bin":"1065210","boro":"Q","feature_carried":"WHITESTONE 
     $('clear-points').hidden = filters.bins === null;
     $('empty-state').hidden = selected.length !== 0;
     chips();
-    conditionChart();
-    boroughChart();
-    structureChart();
+    conditionChart(interactive);
+    boroughChart(interactive);
+    structureChart(interactive);
     medianComparison();
     detailPanel();
     const restore = focusId && $(focusId);
@@ -1673,7 +1814,22 @@ window.BRIDGE_DATA = [{"bin":"1065210","boro":"Q","feature_carried":"WHITESTONE 
     document.addEventListener('keydown', event => {
       if (event.key === 'Escape') hideTip();
     });
-    render();
+    render(false);
+    // Keep labels readable on smaller cards. Observe width only so that
+    // updating the SVG height does not trigger another redraw.
+    const summaryCharts = [$('condition-chart'), $('borough-chart')];
+    const widths = new Map(summaryCharts.map(chart => [chart, chart.clientWidth]));
+    const resize = new ResizeObserver(entries => {
+      for (const {target} of entries) {
+        if (widths.get(target) === target.clientWidth) continue;
+        widths.set(target, target.clientWidth);
+        const focusId = document.activeElement?.id;
+        if (target.id === 'condition-chart') conditionChart(false);
+        else boroughChart(false);
+        if (focusId && document.activeElement === document.body) $(focusId)?.focus({preventScroll: true});
+      }
+    });
+    summaryCharts.forEach(chart => resize.observe(chart));
   } catch (error) {
     $('record-count').textContent = 'Load error';
     $('empty-state').hidden = false;
