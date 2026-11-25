@@ -2,9 +2,11 @@
 
 **Tilak Bhansali | NYU Tandon | Information Visualization | Mini-Project 2**
 
-A working prototype for exploring the 2024 NYC DOT bridge inventory. The starting view includes every record. Linked selections narrow the records while condition and borough charts retain their own comparison context.
+An interactive dashboard for exploring the 2024 NYC DOT bridge inventory. The starting view includes every record. Linked selections narrow the records while condition and borough charts retain their own comparison context.
 
 ## Open it
+
+**Live dashboard:** https://tilak30.github.io/counting-crossings/
 
 The simplest option is to double-click **Counting_Crossings.html**. It contains the code, styles and all 813 records in one file. It needs a browser with JavaScript enabled, but no installation or internet connection. The link to the original report needs internet access.
 
@@ -100,7 +102,7 @@ The proposal's encodings and three-view layout are retained. Implementation chan
 
 - Plain HTML, CSS, JavaScript and SVG replace the planned Python/Plotly Dash runtime. Python remains the data-preparation tool. This allows static hosting and a self-contained offline copy.
 - A rectangular brush is implemented; free-form lasso is deferred. A structure selection filters the plot, rather than retaining unselected points as a dim background. The two summary charts now retain their own facet context as described above; point selections remain explicit filters in that context.
-- Updates are immediate, with no animated transitions. This removes the need for a motion preference at this stage.
+- Data and labels update immediately. Bar lengths and borough mark positions settle over 340 ms, and the individual marks briefly fade in when their selection changes. Only views whose underlying comparison records change get the temporary Updated cue. Reduced-motion settings turn off interpolation and fading.
 - The initial view includes the complete inventory. The earlier preliminary findings are not preselected or used as the dashboard's headline.
 - The post-midterm revision retains condition and borough comparison context, adds fixed inventory references and exact medians with n, and explains source codes and inspection dates. See `docs/feedback-review.md` for decisions and `docs/demo-walkthrough.md` for the revised demonstration.
 
@@ -116,6 +118,7 @@ The response to the instructor feedback is also available in `docs/Counting_Cros
 | `dist/styles.css` | Layout, typography and focus styles |
 | `dist/model.js` | Selection, totals, grouped summaries and validation |
 | `dist/app.js` | SVG rendering, tooltips, clicks, brushing and CSV export |
+| `dist/chart-motion.js` | Numeric mark transitions and filter-change feedback |
 | `dist/data/` | Complete browser-ready CSV, JSON and embedded JavaScript data |
 | `data/raw/dot_bridgereport24.pdf` | Frozen source report |
 | `data/processed/` | Re-extracted data and audit report |
@@ -174,7 +177,7 @@ This has no npm dependencies. Report totals in the tests are independent audit e
 ## Troubleshooting
 
 - If a browser displays source text, check that the standalone filename ends in `.html`, then open it with Chrome, Firefox, Edge or Safari.
-- If the separate-source page shows a load error, keep `index.html`, `app.js`, `model.js`, `styles.css` and `data/` together. The standalone file avoids missing-asset problems.
+- If the separate-source page shows a load error, keep `index.html`, `app.js`, `model.js`, `chart-motion.js`, `styles.css` and `data/` together. The standalone file avoids missing-asset problems.
 - If port 8000 is busy, use `python3 -m http.server 8001 --directory dist` and open http://localhost:8001.
 - If `python3` is not found on Windows, use `py`. You can still use the standalone file without Python.
 - If a filter gives no results, clear its chip or reset. Multiple filters narrow the data together.
@@ -182,8 +185,10 @@ This has no npm dependencies. Report totals in the tests are independent audit e
 - Open CSV files using UTF-8 and treat BIN as text. Excel may otherwise change identifiers. The selected export includes a UTF-8 BOM.
 - GitHub Pages is the public submission host. The review preview is separate and private. Check the public URL in a signed-out/private window after an approved deployment; do not submit the private review link.
 
-## Status and assistance
+## Verification and attribution
 
-The data, all three views, cross-view filtering, comparison context, borough reference marks, median table, point/box selection, details and export are implemented. Detailed checks are in `docs/verification.md`. The supplied professor feedback is documented; this does not establish attendance, peer names or a completed peer session. Formal usability testing and a complete accessibility audit are not claimed. The revision is for private review before any GitHub push.
+The final revision adds a brief update cue and chart motion in response to peer feedback. It keeps the existing comparison denominators, fixed inventory references and group medians. See [verification](docs/verification.md#final-release-checks) for what was actually checked.
 
-ChatGPT (Codex) assisted with implementation, data verification, testing and documentation. Source data is from NYC DOT. Review the code and practice the demo so you can explain the choices yourself; follow the course's assistance-disclosure requirements.
+Data: NYC Department of Transportation, *Bridges & Tunnels Annual Condition Report, 2024 Edition*. See the data section above for extract pages, validation and limits. The color scale is sampled from Matplotlib's cividis palette, linked above. The project uses native HTML, CSS, JavaScript and SVG, with no runtime library, build package or CDN.
+
+AI disclosure: ChatGPT (Codex) assisted with the earlier proposal and implementation, data checks, final transition code, browser checks, report drafting and packaging. The usability findings come from peers' written responses about their own use of the live dashboard. No peer timings or post-revision peer results were inferred.
