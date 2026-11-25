@@ -1,6 +1,18 @@
-# Prototype verification
+# Counting Crossings verification
 
 This record separates prior checks, observed revision checks and work still needed. Revision review: November 18, 2026. The student approved this revision for GitHub publication after reviewing the private preview. Public deployment is verified separately during release.
+
+## Final release checks
+
+November 25, 2026. The final release keeps native JavaScript/SVG and the existing data model and encodings. Project-specific motion logic lives in `dist/chart-motion.js`; all generated HTML copies are built by `scripts/build_standalone.py`.
+
+- All 13 Node tests passed; checked both JavaScript entry files for syntax errors.
+- Chromium opened the final standalone file directly with 813 records and no console or page errors. Fair + Poor produced 526 records; Manhattan narrowed the selected subset to 138 and 3,441,070.5 sq ft while the condition and borough denominators remained 189 and 526, respectively.
+- Fair group statistics matched the expected table (PED-coded: n=103, 1,500 sq ft, 3 spans; other codes: n=415, 6,517 sq ft, 2 spans).
+- Exercised point selection, rectangle brushing from the structure chart, clearing, Reset, no-match search, tooltips, CSV export and keyboard row activation/focus. The test brush selected 85 records and updated both summaries.
+- Verified that the short cue appears on affected views, expires, and does not supersede the active row/chip. With reduced motion enabled, the cue remains available without fading or mark motion.
+- Checked layout from 320 to 1440 px without page-level horizontal overflow; the detailed plot/table may scroll inside their panel on small screens. Inspected a greyscale rendering for redundant labels, hatching, symbols and lane positions.
+- Peer evidence is written task feedback from two reviewers on the pre-revision live build. Final screenshots and checks are developer verification, not a peer retest. No observer timing, touch-device study or screen-reader certification is claimed.
 
 ## Revision checks completed
 
@@ -37,7 +49,7 @@ These record the original prototype and are not substitutes for checking changed
 - Student approval was received on November 18, 2026. Verify the approved revision on the public Pages URL after deployment and replace outdated screenshots or submission descriptions as needed.
 - The private preview passed the reported desktop visual and interaction checks and was reviewed by the student. Public Pages verification remains a separate release check.
 - Actual in-class attendance, live demonstration, peer identities and session observations must come from the student. The professor feedback supplied for this revision is genuine input, but does not establish a separate peer session or replace its required log.
-- Formal usability testing with two peers, mobile/touch testing, cross-browser testing, screen-reader testing and a complete accessibility audit are not claimed.
+- At that prototype checkpoint, two-peer testing, mobile/touch testing, cross-browser testing, screen-reader testing and a complete accessibility audit had not been claimed.
 - Direct offline file-opening should be checked on the student's computer.
 
 ## Readiness and limitations
