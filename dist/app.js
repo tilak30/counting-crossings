@@ -1,6 +1,7 @@
 (function() {
   'use strict';
   const M = window.BridgeModel;
+  const motion = window.ChartMotion;
   const rows = window.BRIDGE_DATA;
   const $ = id => document.getElementById(id);
   const ns = 'http://www.w3.org/2000/svg';
@@ -96,6 +97,12 @@
     element.addEventListener('blur', hideTip);
   }
 
+  function summaryWidth(chart) {
+    const width = Math.max(300, Math.min(620, Math.round(chart.clientWidth) || 620));
+    chart.setAttribute('viewBox', `0 0 ${width} 284`);
+    return width;
+  }
+
   function axis(parent, left, right, bottom, top) {
     [0, 25, 50, 75, 100].forEach(value => {
       const x = left + (right - left) * value / 100;
@@ -116,14 +123,17 @@
     });
   }
   // Preserve the condition comparison by excluding only its own selection.
-  function conditionChart() {
+  function conditionChart(interactive) {
     const chart = $('condition-chart');
+    const previous = motion.capture(chart);
     chart.replaceChildren();
     const population = M.viewRows(rows, filters, 'condition');
+    const animate = motion.changed(chart, population, interactive);
+    const width = summaryWidth(chart);
     const groups = M.summarize(population, 'condition', M.conditions);
     $('condition-context').textContent = `Comparison: ${number.format(population.length)} ${population.length === 1 ? 'structure' : 'structures'}, ${number.format(M.totalArea(population))} sq ft. Includes all conditions; other filters apply. ` + (filters.conditions.length ? 'Highlighted rows are selected; muted rows remain for comparison.' : 'All conditions included.');
-    const left = 109,
-      right = 538;
+    const left = width < 450 ? 91 : 109,
+      right = width - 74;
     const defs = svg('defs', {}, chart);
     M.conditions.forEach(name => {
       const hatchStroke = name === 'Very good' ? '#806b20' : M.colors[name];
@@ -165,13 +175,13 @@
       svg('rect', {
         x: 0,
         y: y - 6,
-        width: 615,
+        width: width - 5,
         height: 39,
         rx: 3,
         fill: active ? '#dcefe7' : 'transparent',
         stroke: 'none'
       }, row);
-      text(row, 99, y + 13, group.name, {
+      text(row, left - 10, y + 13, group.name, {
         'text-anchor': 'end',
         fill: active ? '#125b54' : '#3e535b',
         'font-weight': active ? '700' : '400'
@@ -179,7 +189,9 @@
       const values = [group.countShare, group.areaShare];
       values.forEach((value, j) => {
         const width = (value || 0) / 100 * (right - left);
-        svg('rect', {
+        const key = `bar-${group.name}-${j}`;
+        const bar = svg('rect', {
+          'data-motion': key,
           x: left,
           y: y + j * 13,
           width,
@@ -189,9 +201,14 @@
           'stroke-width': 1,
           'pointer-events': 'none'
         }, row);
-        text(row, left + width + 6, y + 8 + j * 13, percent(value), {
+        const name = key + '-label';
+        const labelX = left + width + 6;
+        const markLabel = text(row, labelX, y + 8 + j * 13, percent(value), {
+          'data-motion': name,
           'font-size': 12
         });
+        motion.move(bar, previous.get(key), {width}, animate);
+        motion.move(markLabel, previous.get(name), {x: labelX}, animate);
       });
       const info =
         `<b>${escape(group.name)}</b><br>${number.format(group.count)} structures · ${percent(group.countShare)}<br>${number.format(group.area)} sq ft · ${percent(group.areaShare)}<br><span class="tip-muted">Of ${population.length} comparison records before condition selection. Click to toggle.</span>`;
@@ -201,7 +218,7 @@
         render();
       });
     });
-    line(chart, 4, 181, 610, 181, {
+    line(chart, 4, 181, width - 10, 181, {
       stroke: '#b5c0c0',
       'stroke-dasharray': '3 3',
       'pointer-events': 'none'
@@ -209,16 +226,19 @@
     chart.dataset.recordCount = population.length;
   }
   // These are contributions to the selected cohort, not within-borough rates.
-  function boroughChart() {
+  function boroughChart(interactive) {
     const chart = $('borough-chart');
+    const previous = motion.capture(chart);
     chart.replaceChildren();
     const population = M.viewRows(rows, filters, 'borough');
+    const animate = motion.changed(chart, population, interactive);
+    const width = summaryWidth(chart);
     const groups = M.summarize(population, 'borough_group', M.boroughs);
     $('borough-context').textContent = `Comparison: ${number.format(population.length)} ${population.length === 1 ? 'structure' : 'structures'}, ${number.format(M.totalArea(population))} sq ft, before borough selection. Other filters apply. Light marks below each row: full 813-record inventory. ` + (filters.boroughs.length ? 'Highlighted rows are selected; muted rows remain for comparison.' : 'All boroughs included.');
-    const left = 118,
-      right = 498;
+    const left = width < 450 ? 94 : 118,
+      right = width - 98;
     axis(chart, left, right, 245, 9);
-    text(chart, 613, 10, 'count / area', {
+    text(chart, width - 7, 10, 'count / area', {
       'text-anchor': 'end',
       'font-size': 11
     });
@@ -241,12 +261,12 @@
       svg('rect', {
         x: 0,
         y: y - 13,
-        width: 618,
+        width: width - 2,
         height: 27,
         rx: 3,
         fill: active ? '#e8f1ed' : 'transparent'
       }, row);
-      text(row, 108, y + 4, group.name, {
+      text(row, left - 8, y + 4, group.name, {
         'text-anchor': 'end',
         'font-weight': active ? '700' : '400',
         fill: active ? '#125b54' : '#3e535b'
@@ -261,13 +281,21 @@
       svg('rect', {x: x(baseline.areaShare) - 2.5, y: y + 6.5, width: 5, height: 5,
         fill: '#fff', stroke: '#71817c', 'stroke-width': .9}, reference);
       if (group.countShare !== null) {
-        line(row, x(group.countShare), y - 3, x(group.areaShare), y - 3,
-          {stroke: '#91a6aa', 'stroke-width': 2});
-        svg('circle', {cx: x(group.countShare), cy: y - 3, r: 4.8, fill: '#263e4a'}, row);
-        svg('rect', {x: x(group.areaShare) - 3.5, y: y - 6.5, width: 7, height: 7,
+        const countX = x(group.countShare);
+        const areaX = x(group.areaShare);
+        const key = id(group.name);
+        const connector = line(row, countX, y - 3, areaX, y - 3,
+          {'data-motion': key + '-link', stroke: '#91a6aa', 'stroke-width': 2});
+        const countMark = svg('circle', {'data-motion': key + '-count',
+          cx: countX, cy: y - 3, r: 4.8, fill: '#263e4a'}, row);
+        const areaMark = svg('rect', {'data-motion': key + '-area',
+          x: areaX - 3.5, y: y - 6.5, width: 7, height: 7,
           fill: 'white', stroke: '#263e4a', 'stroke-width': 1.2}, row);
+        motion.move(connector, previous.get(key + '-link'), {x1: countX, x2: areaX}, animate);
+        motion.move(countMark, previous.get(key + '-count'), {cx: countX}, animate);
+        motion.move(areaMark, previous.get(key + '-area'), {x: areaX - 3.5}, animate);
       }
-      text(row, 613, y + 4, `${percent(group.countShare)} / ${percent(group.areaShare)}`,
+      text(row, width - 7, y + 4, `${percent(group.countShare)} / ${percent(group.areaShare)}`,
         {'text-anchor': 'end', 'font-size': 12});
       const delta = (current, full) => current === null ? 'No comparison records' :
         `${current - full >= 0 ? '+' : ''}${(current - full).toFixed(1)} percentage points`;
@@ -355,9 +383,10 @@
       'n = number of structures. A dash means no records, not zero. Small groups need caution; medians describe this selection, not a general rule.';
   }
 
-  function structureChart() {
+  function structureChart(interactive) {
     const chart = $('structure-chart');
     chart.replaceChildren();
+    const animate = motion.changed(chart, selected, interactive);
     const left = 108,
       right = 1245,
       top = 12,
@@ -415,6 +444,7 @@
       'font-size': 11
     });
     plotted = [];
+    const marks = svg('g', {class: 'structure-marks'}, chart);
     [...selected].sort((a, b) => M.markerAreas[b.span_band] - M.markerAreas[a.span_band] || a.bin
       .localeCompare(b.bin)).forEach(row => {
       const x = left + (Math.log10(row.deck_area_sq_ft) - 2) / 4 * (right - left);
@@ -424,7 +454,7 @@
         y,
         row
       });
-      const point = drawMarker(chart, x, y, M.markerAreas[row.span_band], row.pedestrian_code ===
+      const point = drawMarker(marks, x, y, M.markerAreas[row.span_band], row.pedestrian_code ===
         'PED-coded', {
           id: 'point-' + row.bin,
           class: 'structure-point',
@@ -446,6 +476,7 @@
     });
     chart.dataset.recordCount = selected.length;
     chart.dataset.markCount = plotted.length;
+    motion.fadePoints(marks, animate);
   }
 
   function detailPanel() {
@@ -517,7 +548,7 @@
     }
   }
   // Totals, records and medians use all filters; summary charts retain their own facet context.
-  function render() {
+  function render(interactive = true) {
     const focusId = document.activeElement?.id;
     hideTip();
     selected = M.select(rows, filters);
@@ -533,9 +564,9 @@
     $('clear-points').hidden = filters.bins === null;
     $('empty-state').hidden = selected.length !== 0;
     chips();
-    conditionChart();
-    boroughChart();
-    structureChart();
+    conditionChart(interactive);
+    boroughChart(interactive);
+    structureChart(interactive);
     medianComparison();
     detailPanel();
     const restore = focusId && $(focusId);
@@ -690,7 +721,22 @@
     document.addEventListener('keydown', event => {
       if (event.key === 'Escape') hideTip();
     });
-    render();
+    render(false);
+    // Keep labels readable on smaller cards. Observe width only so that
+    // updating the SVG height does not trigger another redraw.
+    const summaryCharts = [$('condition-chart'), $('borough-chart')];
+    const widths = new Map(summaryCharts.map(chart => [chart, chart.clientWidth]));
+    const resize = new ResizeObserver(entries => {
+      for (const {target} of entries) {
+        if (widths.get(target) === target.clientWidth) continue;
+        widths.set(target, target.clientWidth);
+        const focusId = document.activeElement?.id;
+        if (target.id === 'condition-chart') conditionChart(false);
+        else boroughChart(false);
+        if (focusId && document.activeElement === document.body) $(focusId)?.focus({preventScroll: true});
+      }
+    });
+    summaryCharts.forEach(chart => resize.observe(chart));
   } catch (error) {
     $('record-count').textContent = 'Load error';
     $('empty-state').hidden = false;
