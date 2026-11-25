@@ -11,7 +11,7 @@ data_js = 'window.BRIDGE_DATA = ' + json.dumps(rows, separators=(',', ':')) + ';
 (DIST / 'data/bridges.js').write_text(data_js)
 html = (DIST / 'index.html').read_text()
 html = html.replace('<link rel="stylesheet" href="styles.css">', '<style>\n' + (DIST / 'styles.css').read_text() + '\n</style>')
-for name in ['data/bridges.js','model.js','app.js']:
+for name in ['data/bridges.js', 'model.js', 'chart-motion.js', 'app.js']:
     code = (DIST / name).read_text().replace('</script', '<\\/script')
     html = html.replace(f'<script src="{name}"></script>', '<script>\n' + code + '\n</script>')
 # The selected-record download also exports the whole inventory after Reset.
