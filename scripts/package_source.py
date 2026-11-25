@@ -5,7 +5,7 @@ from zipfile import ZipFile, ZIP_DEFLATED
 ROOT = Path(__file__).resolve().parents[1]
 target = ROOT / "dist/Counting_Crossings_Source.zip"
 files = [ROOT / name for name in (
-    "README.md", "package.json", "requirements.txt", "Counting_Crossings.html"
+    "README.md", "package.json", "requirements.txt", "Counting_Crossings.html", "index.html", ".nojekyll"
 )]
 for folder in ("dist", "data/raw", "data/processed", "src", "scripts", "tests", "docs"):
     files.extend(path for path in (ROOT / folder).rglob("*")
