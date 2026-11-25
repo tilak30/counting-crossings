@@ -32,20 +32,20 @@
   <div id="empty-state" class="empty-state" hidden>No structures match these filters. Clear a filter above or reset to the full inventory.</div>
   <section id="dashboard" class="dashboard" aria-label="Three linked views">
     <article class="chart-panel">
-      <div class="panel-title"><span class="view-number">01</span><div><h2>Condition mix</h2><p>RQ1 · Count each structure, then weight by area.</p></div></div>
+      <div class="panel-title"><span class="view-number">01</span><div><h2>Condition mix</h2><p>RQ1 · Count each structure, then weight by area.</p></div><span class="update-cue" aria-hidden="true" hidden>Updated</span></div>
       <div class="legend"><span><i class="solid-key"></i>Structure share</span><span><i class="hatch-key"></i>Deck-area share</span><small>Click a row to filter · click again to clear</small></div>
       <svg id="condition-chart" viewBox="0 0 620 284" role="group" aria-label="Condition comparison: click to filter the other views and highlight this row"></svg>
       <p class="chart-caption"><span id="condition-context"></span><br>Closed is an unranked status. Multiple conditions can be selected; click again to clear.</p>
     </article>
     <article class="chart-panel">
-      <div class="panel-title"><span class="view-number">02</span><div><h2>Across boroughs</h2><p>RQ2 · Compare borough contributions by count and area.</p></div></div>
+      <div class="panel-title"><span class="view-number">02</span><div><h2>Across boroughs</h2><p>RQ2 · Compare borough contributions by count and area.</p></div><span class="update-cue" aria-hidden="true" hidden>Updated</span></div>
       <div class="legend"><span><i class="circle-key"></i>Structure share</span><span><i class="square-key"></i>Deck-area share</span><small>Click a row to filter</small></div>
       <p class="reference-legend"><span><i class="reference-circle"></i><i class="reference-square"></i> Light marks below each row = full-inventory count / area shares</span></p>
       <svg id="borough-chart" viewBox="0 0 620 284" role="group" aria-label="Borough comparison: click to filter the other views and highlight this row"></svg>
       <p class="chart-caption"><span id="borough-context"></span><br>Cross-borough structures are counted once; shares are not within-borough condition rates.</p>
     </article>
     <article class="chart-panel structure-panel">
-      <div class="panel-title"><span class="view-number">03</span><div><h2>Individual structures</h2><p>RQ3 · Compare deck area and spans within each condition.</p></div><button id="clear-points" class="text-button" hidden>Clear structure selection</button></div>
+      <div class="panel-title"><span class="view-number">03</span><div><h2>Individual structures</h2><p>RQ3 · Compare deck area and spans within each condition.</p></div><span class="update-cue" aria-hidden="true" hidden>Updated</span><button id="clear-points" class="text-button" hidden>Clear structure selection</button></div>
       <div class="legend structure-legend"><span><i class="triangle-key"></i>PED-coded</span><span><i class="circle-key"></i>Other codes</span><div id="size-legend" class="size-legend" aria-label="Span bands"></div><small>Hover for details · click a point or drag a box to select</small></div>
       <svg id="structure-chart" viewBox="0 0 1280 300" role="group" aria-label="All selected structures: log deck area, condition rows, span size bands, and bridge-type shapes"></svg>
       <p class="chart-caption">Each step on the horizontal axis means 10 times the area. Marker area shows a span band, not an exact span ratio. Small vertical offsets separate overlapping points.</p>
@@ -81,6 +81,7 @@
 <noscript>This dashboard needs JavaScript enabled. The source data is available in data/bridges_2024.csv.</noscript>
 <script src="data/bridges.js"></script>
 <script src="model.js"></script>
+<script src="chart-motion.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
