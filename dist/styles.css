@@ -757,3 +757,40 @@ svg .structure-point:focus-visible {
 .filters label { font-size: 13px; }
 .filters input, .filters select { font-size: 14px; }
 .filter-chip, .active-filters .all-label { font-size: 13px; }
+
+/* Brief update cue, separate from the persistent selection treatment. */
+.chart-panel { position: relative; min-width: 0; }
+.update-cue {
+  display: inline-block;
+  flex: 0 0 auto;
+  margin-left: auto;
+  border: 1px solid #438576;
+  border-radius: 9px;
+  padding: 2px 8px;
+  color: #194c43;
+  background: #e8f1ed;
+  font-size: 11px;
+  line-height: 1.4;
+}
+.chart-panel.chart-updated {
+  box-shadow: inset 0 0 0 2px #438576;
+  animation: cross-filter-outline 1.45s ease-out both;
+}
+.chart-updated .update-cue { animation: cross-filter-label 1.45s ease-out both; }
+@keyframes cross-filter-outline {
+  0%, 44% { box-shadow: inset 0 0 0 2px #438576; }
+  100% { box-shadow: inset 0 0 0 2px transparent; }
+}
+@keyframes cross-filter-label {
+  0%, 50% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chart-panel.chart-updated, .chart-updated .update-cue { animation: none; }
+}
+@media (max-width: 720px) {
+  .chart-panel:has(> #condition-chart), .chart-panel:has(> #borough-chart) { overflow-x: auto; }
+  #condition-chart, #borough-chart { min-width: 270px; }
+  .structure-panel .panel-title { flex-wrap: wrap; }
+  .structure-panel .update-cue { margin-left: 0; }
+}
